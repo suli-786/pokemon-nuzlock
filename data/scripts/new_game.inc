@@ -273,7 +273,73 @@ EventScript_ResetAllMapFlags::
 	setflag FLAG_HIDE_SKY_PILLAR_WALLACE
 	setflag FLAG_HIDE_SKY_PILLAR_TOP_RAYQUAZA_STILL
 	call EventScript_ResetAllBerries
+	call Overhaul_EventScript_NewGamePreset
 	end
+
+@ ============================================================================
+@ Overhaul: Team Aqua/Magma arcs pre-completed + intro skipped.
+@ Gate map verified in docs/overhaul/investigations/ws_story-cuts.md.
+@ Runs headless via RunScriptImmediately (NewGameInitData) before the overworld
+@ exists, so this block is flags/vars ONLY -- no givemon/additem/UI specials.
+@ In-field setup (Pokedex specials, starter) lives in the Route 101 trigger.
+@ TODO: relocate cut-arc rewards (Castform, Cozmo's meteorite/TM) onto NPCs.
+@ ============================================================================
+Overhaul_EventScript_NewGamePreset::
+	@ --- Intro complete: no truck, no bedroom clock, no Birch rescue ---
+	setflag FLAG_ADVENTURE_STARTED
+	setflag FLAG_SET_WALL_CLOCK
+	setvar VAR_LITTLEROOT_INTRO_STATE, 7
+	setvar VAR_LITTLEROOT_TOWN_STATE, 4
+	setvar VAR_LITTLEROOT_HOUSES_STATE_BRENDAN, 2
+	setvar VAR_LITTLEROOT_HOUSES_STATE_MAY, 2
+	setvar VAR_LITTLEROOT_RIVAL_STATE, 4
+	setvar VAR_CABLE_CLUB_TUTORIAL_STATE, 2
+	setflag FLAG_HIDE_ROUTE_101_BIRCH_ZIGZAGOON_BATTLE
+	setflag FLAG_HIDE_ROUTE_101_BIRCH_STARTERS_BAG
+	setflag FLAG_VISITED_LITTLEROOT_TOWN
+
+	@ --- Devon goods / Briney chain (gates badge 2 sailing + PokeNav) ---
+	setflag FLAG_DEVON_GOODS_STOLEN
+	setflag FLAG_RETURNED_DEVON_GOODS
+	setflag FLAG_DELIVERED_DEVON_GOODS
+	setflag FLAG_DELIVERED_STEVEN_LETTER
+	setflag FLAG_RECEIVED_POKENAV
+	setvar VAR_PETALBURG_WOODS_STATE, 1
+	setvar VAR_RUSTURF_TUNNEL_STATE, 3
+	setvar VAR_BRINEY_HOUSE_STATE, 1
+	setvar VAR_ROUTE116_STATE, 2
+	setflag FLAG_HIDE_ROUTE_116_MR_BRINEY
+	clearflag FLAG_HIDE_BRINEYS_HOUSE_MR_BRINEY
+	clearflag FLAG_HIDE_BRINEYS_HOUSE_PEEKO
+
+	@ --- Aqua/Magma roadblocks (each one gates a badge) ---
+	setflag FLAG_HIDE_ROUTE_110_TEAM_AQUA      @ badge 3
+	setflag FLAG_HIDE_ROUTE_112_TEAM_MAGMA     @ badge 4
+	setflag FLAG_HIDE_ROUTE_119_TEAM_AQUA      @ badge 6
+	setflag FLAG_HIDE_LILYCOVE_CITY_AQUA_GRUNTS @ badge 7
+	setvar VAR_SLATEPORT_CITY_STATE, 1
+	setvar VAR_SLATEPORT_HARBOR_STATE, 2
+	setvar VAR_WEATHER_INSTITUTE_STATE, 2
+	clearflag FLAG_HIDE_WEATHER_INSTITUTE_1F_WORKERS
+	setvar VAR_MT_PYRE_STATE, 3
+	setflag FLAG_GROUDON_AWAKENED_MAGMA_HIDEOUT
+	setflag FLAG_TEAM_AQUA_ESCAPED_IN_SUBMARINE
+
+	@ --- Space Center cut; Steven still hands over HM Dive at his house ---
+	setvar VAR_MOSSDEEP_SPACE_CENTER_STATE, 3
+	setflag FLAG_DEFEATED_MAGMA_SPACE_CENTER
+	setvar VAR_STEVENS_HOUSE_STATE, 1
+
+	@ --- Sootopolis crisis pre-resolved; Wallace hands over HM Waterfall ---
+	setvar VAR_SOOTOPOLIS_CITY_STATE, 6
+	setflag FLAG_KYOGRE_ESCAPED_SEAFLOOR_CAVERN
+	setflag FLAG_SOOTOPOLIS_ARCHIE_MAXIE_LEAVE
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_RESIDENTS
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_WALLACE
+	setvar VAR_SEAFLOOR_CAVERN_STATE, 1
+	setvar VAR_ROUTE128_STATE, 2
+	setvar VAR_SKY_PILLAR_STATE, 3
+	return
 
 EventScript_ResetAllMapFlagsFrlg::
 	setflag FLAG_HIDE_OAK_IN_HIS_LAB

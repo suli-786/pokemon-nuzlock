@@ -8,12 +8,37 @@ Route101_OnTransition:
 	end
 
 Route101_OnFrame:
-	map_script_2 VAR_ROUTE101_STATE, 0, Route101_EventScript_HideMapNamePopup
+	map_script_2 VAR_ROUTE101_STATE, 0, Overhaul_EventScript_StarterChoice
 	.2byte 0
 
 Route101_EventScript_HideMapNamePopup::
 	setflag FLAG_HIDE_MAP_NAME_POPUP
 	setvar VAR_ROUTE101_STATE, 1
+	end
+
+@ Overhaul: new games spawn here instead of the truck. Pick a starter (no
+@ Birch rescue, no tutorial battle), then the post-lab world state is applied.
+@ In-field context, so UI specials are safe here (unlike the new-game preset).
+Overhaul_EventScript_StarterChoice::
+	lockall
+	setflag FLAG_SYS_POKEMON_GET
+	setflag FLAG_RESCUED_BIRCH
+	msgbox Overhaul_Text_PickStarter, MSGBOX_DEFAULT
+	closemessage
+	fadescreen FADE_TO_BLACK
+	special ChooseStarterNoBattle
+	special HealPlayerParty
+	setvar VAR_BIRCH_LAB_STATE, 2
+	setvar VAR_ROUTE101_STATE, 3
+	clearflag FLAG_HIDE_LITTLEROOT_TOWN_BIRCHS_LAB_BIRCH
+	setflag FLAG_SYS_POKEDEX_GET
+	special SetUnlockedPokedexFlags
+	setflag FLAG_RECEIVED_POKEDEX_FROM_BIRCH
+	setflag FLAG_SYS_NATIONAL_DEX
+	special EnableNationalPokedex
+	setflag FLAG_RECEIVED_RUNNING_SHOES
+	setflag FLAG_SYS_B_DASH
+	releaseall
 	end
 
 Route101_EventScript_StartBirchRescue::
@@ -296,3 +321,8 @@ Route101_Text_RouteSign:
 	.string "ROUTE 101\n"
 	.string "{UP_ARROW} OLDALE TOWN$"
 
+
+Overhaul_Text_PickStarter:
+	.string "Three POKé BALLS are waiting here.\p"
+	.string "Choose the partner you'll start your\n"
+	.string "journey with!$"

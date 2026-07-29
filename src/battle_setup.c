@@ -958,6 +958,25 @@ void ChooseStarter(void)
     gMain.savedCallback = CB2_GiveStarter;
 }
 
+// Overhaul: starter selection without the Birch/Zigzagoon tutorial battle.
+// Used by the new-game flow in data/scripts/new_game.inc (see docs/overhaul/ROADMAP.md).
+static void CB2_GiveStarterNoBattle(void)
+{
+    u16 starterMon;
+
+    *GetVarPointer(VAR_STARTER_MON) = gSpecialVar_Result;
+    starterMon = GetStarterPokemon(gSpecialVar_Result);
+    ScriptGiveMon(starterMon, 5, ITEM_NONE);
+    ResetTasks();
+    SetMainCallback2(CB2_ReturnToFieldContinueScriptPlayMapMusic);
+}
+
+void ChooseStarterNoBattle(void)
+{
+    SetMainCallback2(CB2_ChooseStarter);
+    gMain.savedCallback = CB2_GiveStarterNoBattle;
+}
+
 static void CB2_GiveStarter(void)
 {
     u16 starterMon;
