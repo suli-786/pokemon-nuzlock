@@ -4799,6 +4799,7 @@ Music: Female
 Items: Potion / Potion
 Double Battle: No
 AI: Smart Trainer / Prediction
+Mugshot: Yellow
 
 Geodude
 Level: 12
@@ -4833,6 +4834,7 @@ Music: Male
 Items: Super Potion / Super Potion
 Double Battle: No
 AI: Smart Trainer / Prediction
+Mugshot: Purple
 
 Machop
 Level: 16
@@ -4867,6 +4869,7 @@ Music: Male
 Items: Super Potion / Super Potion
 Double Battle: No
 AI: Smart Trainer / Prediction
+Mugshot: Yellow
 
 Voltorb
 Level: 20
@@ -4909,6 +4912,7 @@ Music: Female
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
 AI: Smart Trainer / Prediction
+Mugshot: Pink
 
 Numel
 Level: 24
@@ -4951,6 +4955,7 @@ Music: Male
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
 AI: Smart Trainer / Prediction
+Mugshot: Green
 
 Spinda
 Level: 27
@@ -4993,6 +4998,7 @@ Music: Female
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
 AI: Smart Trainer / Prediction / Risky
+Mugshot: Blue
 
 Swablu
 Level: 29
@@ -5043,6 +5049,7 @@ Music: Female
 Items: Hyper Potion / Hyper Potion / Hyper Potion / Hyper Potion
 Double Battle: Yes
 AI: Smart Trainer / Prediction
+Mugshot: Pink
 
 Claydol
 Level: 41
@@ -5085,6 +5092,7 @@ Music: Male
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
 AI: Smart Trainer / Prediction
+Mugshot: Blue
 
 Luvdisc
 Level: 41
@@ -14166,6 +14174,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Golem
 Level: 32
@@ -14208,6 +14217,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Omanyte
 Level: 37
@@ -14258,6 +14268,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Omastar
 Level: 42
@@ -14308,6 +14319,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Aerodactyl
 Level: 47
@@ -14366,6 +14378,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Purple
 
 Machamp @ Sitrus Berry
 Level: 33
@@ -14408,6 +14421,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Purple
 
 Machamp @ Sitrus Berry
 Level: 38
@@ -14450,6 +14464,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Purple
 
 Hitmonchan
 Level: 40
@@ -14500,6 +14515,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Purple
 
 Hitmonlee
 Level: 46
@@ -14558,6 +14574,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Mareep
 Level: 36
@@ -14600,6 +14617,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Pikachu
 Level: 39
@@ -14650,6 +14668,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Raichu
 Level: 44
@@ -14700,6 +14719,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Yellow
 
 Electabuzz
 Level: 50
@@ -14758,6 +14778,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Magcargo @ White Herb
 Level: 38
@@ -14800,6 +14821,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Growlithe
 Level: 41
@@ -14850,6 +14872,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Houndour
 Level: 46
@@ -14908,6 +14931,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Arcanine
 Level: 51
@@ -14966,6 +14990,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Green
 
 Chansey
 Level: 42
@@ -15008,6 +15033,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Green
 
 Slaking @ Sitrus Berry
 Level: 47
@@ -15058,6 +15084,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Green
 
 Slaking @ Sitrus Berry
 Level: 52
@@ -15108,6 +15135,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Green
 
 Slaking @ Sitrus Berry
 Level: 57
@@ -15166,6 +15194,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer / Risky
+Mugshot: Blue
 
 Dratini @ Sitrus Berry
 Level: 40
@@ -15216,6 +15245,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer / Risky
+Mugshot: Blue
 
 Hoothoot
 Level: 43
@@ -15274,6 +15304,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer / Risky
+Mugshot: Blue
 
 Noctowl
 Level: 48
@@ -15332,6 +15363,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer / Risky
+Mugshot: Blue
 
 Noctowl
 Level: 53
@@ -15390,6 +15422,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Slowpoke
 Level: 48
@@ -15440,6 +15473,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Drowzee
 Level: 53
@@ -15498,6 +15532,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Hypno
 Level: 58
@@ -15556,6 +15591,7 @@ Music: Female
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Pink
 
 Hypno
 Level: 63
@@ -15614,6 +15650,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Blue
 
 Poliwag
 Level: 46
@@ -15664,6 +15701,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Blue
 
 Poliwhirl
 Level: 50
@@ -15714,6 +15752,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Blue
 
 Lapras
 Level: 56
@@ -15772,6 +15811,7 @@ Music: Male
 Items: Full Restore / Full Restore / Full Restore
 Double Battle: Yes
 AI: Basic Trainer
+Mugshot: Blue
 
 Lapras
 Level: 61
