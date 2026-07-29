@@ -15832,6 +15832,81 @@ const struct ItemInfo gItemsInfo[] =
         .iconPic = gItemIcon_PokeshiDoll,
         .iconPalette = gItemIconPalette_PokeshiDoll,
     },
+
+// Overhaul custom kit (Phase 2a) — infinite-use QoL items, delivered by the Oldale Quartermaster.
+
+    [ITEM_CAP_CANDY] =
+    {
+        .name = ITEM_NAME("Cap Candy"),
+        .pluralName = ITEM_PLURAL_NAME("Cap Candies"),
+        .price = 0,
+        .importance = 1,
+        .notConsumed = TRUE,
+        .description = COMPOUND_STRING(
+            "Endlessly raises a\n"
+            "Pokémon's level to\n"
+            "the current cap."),
+        .pocket = POCKET_KEY_ITEMS,
+        .sortType = ITEM_TYPE_LEVEL_UP_ITEM,
+        .type = ITEM_USE_PARTY_MENU,
+        .fieldUseFunc = ItemUseOutOfBattle_CapCandy,
+        .iconPic = gItemIcon_RareCandy,
+        .iconPalette = gItemIconPalette_RareCandy,
+    },
+
+    [ITEM_ENDLESS_CANDY] =
+    {
+        .name = ITEM_NAME("Endless Candy"),
+        .pluralName = ITEM_PLURAL_NAME("Endless Candies"),
+        .price = 0,
+        .importance = 1,
+        .notConsumed = TRUE,
+        .description = COMPOUND_STRING(
+            "Endlessly raises\n"
+            "the level of a\n"
+            "Pokémon by one."),
+        .pocket = POCKET_KEY_ITEMS,
+        .sortType = ITEM_TYPE_LEVEL_UP_ITEM,
+        .type = ITEM_USE_PARTY_MENU,
+        .fieldUseFunc = ItemUseOutOfBattle_RareCandy,
+        .effect = gItemEffect_RareCandy,
+        .iconPic = gItemIcon_RareCandy,
+        .iconPalette = gItemIconPalette_RareCandy,
+    },
+
+    [ITEM_PORTA_HEAL] =
+    {
+        .name = ITEM_NAME("Porta Heal"),
+        .price = 0,
+        .importance = 1,
+        .notConsumed = TRUE,
+        .description = COMPOUND_STRING(
+            "Fully heals all\n"
+            "party Pokémon but\n"
+            "never revives."),
+        .pocket = POCKET_KEY_ITEMS,
+        .type = ITEM_USE_FIELD,
+        .fieldUseFunc = ItemUseOutOfBattle_PortaHeal,
+        .iconPic = gItemIcon_LargePotion, // Full Restore's icon (shared "large potion" art)
+        .iconPalette = gItemIconPalette_FullRestore,
+    },
+
+    [ITEM_REPELLANT] =
+    {
+        .name = ITEM_NAME("Repellant"),
+        .price = 0,
+        .importance = 1,
+        .notConsumed = TRUE,
+        .description = COMPOUND_STRING(
+            "Endlessly repels\n"
+            "all wild Pokémon\n"
+            "while activated."),
+        .pocket = POCKET_KEY_ITEMS,
+        .type = ITEM_USE_FIELD,
+        .fieldUseFunc = ItemUseOutOfBattle_Repellant,
+        .iconPic = gItemIcon_Repel,
+        .iconPalette = gItemIconPalette_Repel,
+    },
 };
 
 #undef ITEM_NAME

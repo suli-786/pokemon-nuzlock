@@ -5854,7 +5854,8 @@ void ItemUseCB_RareCandy(u8 taskId, TaskFunc task)
         if (targetSpecies != SPECIES_NONE)
         {
             GetEvolutionTargetSpecies(mon, EVO_MODE_NORMAL, ITEM_NONE, NULL, &canStopEvo, DO_EVO);
-            RemoveBagItem(gSpecialVar_ItemId, 1);
+            if (GetItemConsumability(gSpecialVar_ItemId)) // Overhaul: Endless Candy is never consumed
+                RemoveBagItem(gSpecialVar_ItemId, 1);
             FreePartyPointers();
             gCB2_AfterEvolution = gPartyMenu.exitCallback;
             BeginEvolutionScene(mon, targetSpecies, canStopEvo, gPartyMenu.slotId);
@@ -5873,7 +5874,8 @@ void ItemUseCB_RareCandy(u8 taskId, TaskFunc task)
         sFinalLevel = GetMonData(mon, MON_DATA_LEVEL);
         gPartyMenuUseExitCallback = TRUE;
         UpdateMonDisplayInfoAfterRareCandy(gPartyMenu.slotId, mon);
-        RemoveBagItem(gSpecialVar_ItemId, 1);
+        if (GetItemConsumability(gSpecialVar_ItemId)) // Overhaul: Endless Candy is never consumed
+            RemoveBagItem(gSpecialVar_ItemId, 1);
         GetMonNickname(mon, gStringVar1);
         if (sFinalLevel > sInitialLevel)
         {
@@ -6028,6 +6030,8 @@ static void CB2_ReturnToPartyMenuUsingRareCandy(void)
     SetMainCallback2(CB2_ShowPartyMenuForItemUse);
 }
 
+static void CB2_ReturnToPartyMenuUsingCapCandy(void); // Overhaul: defined below with the Cap Candy flow
+
 static void PartyMenuTryEvolution(u8 taskId)
 {
     struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
@@ -6046,6 +6050,8 @@ static void PartyMenuTryEvolution(u8 taskId)
         FreePartyPointers();
         if (GetItemFieldFunc(gSpecialVar_ItemId) == ItemUseOutOfBattle_RareCandy && gPartyMenu.menuType == PARTY_MENU_TYPE_FIELD && CheckBagHasItem(gSpecialVar_ItemId, 1))
             gCB2_AfterEvolution = CB2_ReturnToPartyMenuUsingRareCandy;
+        else if (GetItemFieldFunc(gSpecialVar_ItemId) == ItemUseOutOfBattle_CapCandy && gPartyMenu.menuType == PARTY_MENU_TYPE_FIELD && CheckBagHasItem(gSpecialVar_ItemId, 1))
+            gCB2_AfterEvolution = CB2_ReturnToPartyMenuUsingCapCandy; // Overhaul: Cap Candy
         else
             gCB2_AfterEvolution = gPartyMenu.exitCallback;
         BeginEvolutionScene(mon, targetSpecies, canStopEvo, gPartyMenu.slotId);
@@ -6059,6 +6065,96 @@ static void PartyMenuTryEvolution(u8 taskId)
             gTasks[taskId].func = Task_ClosePartyMenuAfterText;
     }
 }
+
+// --- Overhaul (Phase 2a): Cap Candy ---------------------------------------
+// One use = the mon jumps INSTANTLY to GetCurrentLevelCap() in a single action:
+// experience is written directly and stats recalculated once, so there are NO
+// per-level move-learn prompts (the summary-screen relearner covers new moves).
+// A single evolution check runs at the end so level-up evolutions still happen.
+// The item is never consumed. TODO: PC-boxed mon support (party-only for now).
+static void Task_CapCandyDisplayLevelUpStatsPg1(u8 taskId);
+static void Task_CapCandyDisplayLevelUpStatsPg2(u8 taskId);
+static void Task_CapCandyTryEvolution(u8 taskId);
+
+void ItemUseCB_CapCandy(u8 taskId, TaskFunc task)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+    struct PartyMenuInternal *ptr = sPartyMenuInternal;
+    s16 *arrayPtr = ptr->data;
+    u32 levelCap = GetCurrentLevelCap();
+    enum Species species = GetMonData(mon, MON_DATA_SPECIES);
+    u32 exp;
+
+    PlaySE(SE_SELECT);
+    if (GetMonData(mon, MON_DATA_IS_EGG) || GetMonData(mon, MON_DATA_LEVEL) >= levelCap)
+    {
+        // Already at (or above) the cap — nothing to do.
+        gPartyMenuUseExitCallback = FALSE;
+        DisplayPartyMenuMessage(gText_WontHaveEffect, TRUE);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = task;
+        return;
+    }
+
+    // Straight to the cap: set experience directly, recalculate stats ONCE.
+    BufferMonStatsToTaskData(mon, arrayPtr);
+    exp = gExperienceTables[gSpeciesInfo[species].growthRate][levelCap];
+    SetMonData(mon, MON_DATA_EXP, &exp);
+    CalculateMonStats(mon);
+    BufferMonStatsToTaskData(mon, &ptr->data[NUM_STATS]);
+
+    // Make sure the move-learn statics can't be misread by other flows.
+    sInitialLevel = 0;
+    sFinalLevel = 0;
+
+    gPartyMenuUseExitCallback = TRUE;
+    UpdateMonDisplayInfoAfterRareCandy(gPartyMenu.slotId, mon);
+    GetMonNickname(mon, gStringVar1);
+    PlayFanfareByFanfareNum(FANFARE_LEVEL_UP);
+    ConvertIntToDecimalStringN(gStringVar2, levelCap, STR_CONV_MODE_LEFT_ALIGN, 3);
+    StringExpandPlaceholders(gStringVar4, gText_PkmnElevatedToLvVar2);
+    DisplayPartyMenuMessage(gStringVar4, TRUE);
+    ScheduleBgCopyTilemapToVram(2);
+    gTasks[taskId].func = Task_CapCandyDisplayLevelUpStatsPg1;
+}
+
+static void Task_CapCandyDisplayLevelUpStatsPg1(u8 taskId)
+{
+    if (WaitFanfare(FALSE) && IsPartyMenuTextPrinterActive() != TRUE && ((JOY_NEW(A_BUTTON)) || (JOY_NEW(B_BUTTON))))
+    {
+        PlaySE(SE_SELECT);
+        DisplayLevelUpStatsPg1(taskId);
+        gTasks[taskId].func = Task_CapCandyDisplayLevelUpStatsPg2;
+    }
+}
+
+static void Task_CapCandyDisplayLevelUpStatsPg2(u8 taskId)
+{
+    if ((JOY_NEW(A_BUTTON)) || (JOY_NEW(B_BUTTON)))
+    {
+        PlaySE(SE_SELECT);
+        DisplayLevelUpStatsPg2(taskId);
+        gTasks[taskId].func = Task_CapCandyTryEvolution;
+    }
+}
+
+static void Task_CapCandyTryEvolution(u8 taskId)
+{
+    if (WaitFanfare(FALSE) && ((JOY_NEW(A_BUTTON)) || (JOY_NEW(B_BUTTON))))
+    {
+        PlaySE(SE_SELECT);
+        RemoveLevelUpStatsWindow();
+        // Single evolution check at the end — level-up evolutions trigger here.
+        PartyMenuTryEvolution(taskId);
+    }
+}
+
+static void CB2_ReturnToPartyMenuUsingCapCandy(void)
+{
+    gItemUseCB = ItemUseCB_CapCandy;
+    SetMainCallback2(CB2_ShowPartyMenuForItemUse);
+}
+// --- end Cap Candy ---------------------------------------------------------
 
 static void DisplayMonNeedsToReplaceMove(u8 taskId)
 {

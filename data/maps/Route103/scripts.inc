@@ -351,3 +351,40 @@ Route103_Text_RouteSign:
 	.string "ROUTE 103\n"
 	.string "{DOWN_ARROW} OLDALE TOWN$"
 
+@ --- Overhaul (Phase 2a): early Old Rod fisherman ---------------------------
+@ One-time gift, gated on FLAG_RECEIVED_OLD_ROD — the SAME flag Dewford's
+@ fisherman sets, so whichever giver the player meets first, the other stops
+@ offering and duplicate rods are impossible.
+Route103_EventScript_OldRodFisherman::
+	lock
+	faceplayer
+	goto_if_set FLAG_RECEIVED_OLD_ROD, Route103_EventScript_OldRodFishermanDone
+	msgbox Route103_Text_TakeMySpareRod, MSGBOX_DEFAULT
+	giveitem ITEM_OLD_ROD
+	goto_if_eq VAR_RESULT, FALSE, Common_EventScript_ShowBagIsFull
+	setflag FLAG_RECEIVED_OLD_ROD
+	msgbox Route103_Text_TryTheWaterHere, MSGBOX_DEFAULT
+	release
+	end
+
+Route103_EventScript_OldRodFishermanDone::
+	msgbox Route103_Text_HowsTheFishing, MSGBOX_DEFAULT
+	release
+	end
+
+Route103_Text_TakeMySpareRod:
+	.string "The water here is teeming with\n"
+	.string "POKéMON, but rods are hard to\l"
+	.string "come by this early on…\p"
+	.string "Tell you what… take my spare\n"
+	.string "OLD ROD!$"
+
+Route103_Text_TryTheWaterHere:
+	.string "Cast it at any stretch of water.\n"
+	.string "You never know what'll bite!$"
+
+Route103_Text_HowsTheFishing:
+	.string "How's the fishing?\p"
+	.string "Me? I don't need a rod anymore.\n"
+	.string "I just like watching the water.$"
+

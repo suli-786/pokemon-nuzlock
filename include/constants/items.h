@@ -1052,6 +1052,12 @@ enum __attribute__((packed)) Item
     ITEM_TATSUGIRINITE = 872,
     ITEM_GLIMMORANITE = 873,
 
+    // Overhaul custom kit (Phase 2a) — see docs/overhaul/ROADMAP.md §7.4/§7.5
+    ITEM_CAP_CANDY = 874,
+    ITEM_ENDLESS_CANDY = 875,
+    ITEM_PORTA_HEAL = 876,
+    ITEM_REPELLANT = 877,
+
     ITEMS_COUNT,
     ITEM_FIELD_ARROW = ITEMS_COUNT,
 };

@@ -8,10 +8,12 @@ Pool: 375+ `FLAG_UNUSED_0x*` ids in `include/constants/flags.h` (+ `DAILY_FLAGS`
 
 | Flag (new name) | Replaces | Module | Purpose |
 |---|---|---|---|
-| `FLAG_OVERHAUL_NO_WILD_ENCOUNTERS` | `FLAG_UNUSED_0x264` | encounters | assigned to `WE_FLAG_NO_ENCOUNTER` (Phase 1) |
+| `FLAG_OVERHAUL_NO_WILD_ENCOUNTERS` | `FLAG_UNUSED_0x264` | encounters | assigned to `WE_FLAG_NO_ENCOUNTER` (Phase 1); toggled by the Repellant key item (Phase 2a) |
 | `FLAG_OVERHAUL_NO_TRAINER_SEE` | `FLAG_UNUSED_0x265` | encounters | assigned to `OW_FLAG_NO_TRAINER_SEE` (Phase 1) |
+| `FLAG_OVERHAUL_QUARTERMASTER_KIT` | `FLAG_UNUSED_0x266` | economy NPCs | Oldale Quartermaster one-time gift of the 4-item kit (Cap Candy, Endless Candy, Porta Heal, Repellant) — Phase 2a |
+| — Route 103 Old Rod NPC (no new flag) | reuses `FLAG_RECEIVED_OLD_ROD` | economy NPCs | shares Dewford's vanilla flag so double rods are impossible (Phase 2a) |
 | — randomizer feature flags (0x020..0x026, referenced not renamed) | `FLAG_UNUSED_0x020`–`0x026` | randomizer | `RANDOMIZER_FLAG_{WILD_MON,FIELD_ITEMS,TRAINER_MON,FIXED_MON,STARTER_AND_GIFT_MON,EGG_MON,ABILITIES}` via `include/config/randomizer.h`; inert while `RANDOMIZER_AVAILABLE` is FALSE |
-| — reserved block: QoL toggles (0x266..0x26B) | TBD at assignment | dialog/encounters | `I_EXP_SHARE_FLAG`, `OW_FLAG_POKE_RIDER`, spares (`FLAG_TEXT_SPEED_INSTANT` unneeded — instant text is global) |
+| — reserved block: QoL toggles (0x267..0x26B) | TBD at assignment | dialog/encounters | `I_EXP_SHARE_FLAG`, `OW_FLAG_POKE_RIDER`, spares (`FLAG_TEXT_SPEED_INSTANT` unneeded — instant text is global); 0x266 was consumed by the Quartermaster (row above) |
 | — reserved block: nuzlocke (≤8 flags) | TBD | nuzlocke engine | run-active, mode bits, `WE_FLAG_NO_CATCHING` dupe gate |
 | — reserved block: quizzes (contiguous run, size TBD by NPC count) | TBD | quiz NPCs | one-time reward flags; daily quizzes use `DAILY_FLAGS` |
 | — reserved block: wagers (≤16 flags) | TBD | wager battles | per-NPC wager-completed flags |
@@ -76,6 +78,7 @@ Every ported branch/asset/tutorial gets a row when its code lands (CREDITS.md ge
 | grunt-lucas | sample-ui scaffold | pending |
 | fakuzatsu (verdant) | team preview screen | **permission required before use** |
 | Pokabbie (Emerald Rogue) | design reference only | no code lifted so far |
+| Istorian (Randolocke v1.1) | design reference: item kit (Cap/Endless Candy, Porta Heal, Repellant), Oldale gift NPCs, Route 103 rod NPC | Phase 2a reimplemented from scratch (no public source) |
 | resetes12 (Modern Emerald) | challenges viewer reference, nuzlocke indicator art | **ask before using art** |
 | huderlem | Poryscript (MIT) | pending |
 | Smogon / @pkmn (data.pkmn.cc) | gym set data via converter | pending |

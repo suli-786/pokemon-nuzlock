@@ -272,6 +272,60 @@ void ItemUseOutOfBattle_ExpShare(u8 taskId)
 #endif
 }
 
+// Overhaul (Phase 2a): Repellant key item — toggles the total wild-encounter switch.
+// Pattern cloned from ItemUseOutOfBattle_ExpShare above.
+static const u8 sText_RepellantOn[] = _("The Repellant is activated.\nWild Pokémon will be repelled.{PAUSE_UNTIL_PRESS}");
+static const u8 sText_RepellantOff[] = _("The Repellant is deactivated.\nWild Pokémon can be encountered.{PAUSE_UNTIL_PRESS}");
+
+void ItemUseOutOfBattle_Repellant(u8 taskId)
+{
+    if (FlagGet(FLAG_OVERHAUL_NO_WILD_ENCOUNTERS))
+    {
+        PlaySE(SE_PC_OFF);
+        if (!gTasks[taskId].data[2]) // to account for pressing select in the overworld
+            DisplayItemMessageOnField(taskId, sText_RepellantOff, Task_CloseCantUseKeyItemMessage);
+        else
+            DisplayItemMessage(taskId, FONT_NORMAL, sText_RepellantOff, CloseItemMessage);
+    }
+    else
+    {
+        PlaySE(SE_REPEL);
+        if (!gTasks[taskId].data[2]) // to account for pressing select in the overworld
+            DisplayItemMessageOnField(taskId, sText_RepellantOn, Task_CloseCantUseKeyItemMessage);
+        else
+            DisplayItemMessage(taskId, FONT_NORMAL, sText_RepellantOn, CloseItemMessage);
+    }
+    FlagToggle(FLAG_OVERHAUL_NO_WILD_ENCOUNTERS);
+}
+
+// Overhaul (Phase 2a): Porta Heal key item — fully heals the party (HP/PP/status)
+// but NEVER revives fainted Pokémon (Randolocke v1.1 default; nuzlocke-safe).
+static const u8 sText_PortaHealUsed[] = _("Party Pokémon healed successfully.{PAUSE_UNTIL_PRESS}");
+
+void ItemUseOutOfBattle_PortaHeal(u8 taskId)
+{
+    u32 i;
+
+    for (i = 0; i < gPartiesCount[B_TRAINER_PLAYER]; i++)
+    {
+        struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][i];
+
+        if (GetMonData(mon, MON_DATA_SPECIES) == SPECIES_NONE)
+            continue;
+        if (GetMonData(mon, MON_DATA_IS_EGG))
+            continue;
+        if (GetMonData(mon, MON_DATA_HP) == 0)
+            continue; // Fainted mons stay fainted — no free revives.
+        HealPokemon(mon);
+    }
+
+    PlaySE(SE_USE_ITEM);
+    if (!gTasks[taskId].data[2]) // to account for pressing select in the overworld
+        DisplayItemMessageOnField(taskId, sText_PortaHealUsed, Task_CloseCantUseKeyItemMessage);
+    else
+        DisplayItemMessage(taskId, FONT_NORMAL, sText_PortaHealUsed, CloseItemMessage);
+}
+
 void ItemUseOutOfBattle_Bike(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
@@ -913,6 +967,13 @@ void ItemUseOutOfBattle_PPUp(u8 taskId)
 void ItemUseOutOfBattle_RareCandy(u8 taskId)
 {
     gItemUseCB = ItemUseCB_RareCandy;
+    SetUpItemUseCallback(taskId);
+}
+
+// Overhaul (Phase 2a): Cap Candy — one action, straight to the level cap.
+void ItemUseOutOfBattle_CapCandy(u8 taskId)
+{
+    gItemUseCB = ItemUseCB_CapCandy;
     SetUpItemUseCallback(taskId);
 }
 
