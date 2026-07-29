@@ -43,6 +43,7 @@
 #include "pokeball.h"
 #include "pokedex.h"
 #include "pokemon.h"
+#include "nuzlocke.h"
 #include "pokerus.h"
 #include "random.h"
 #include "recorded_battle.h"
@@ -5674,6 +5675,12 @@ static void WaitForEvoSceneToFinish(void)
 
 static void ReturnFromBattleToOverworld(void)
 {
+    // Nuzlocke rules 4/7/8. Runs after TryEvolvePokemon (so party indices are
+    // still valid for the evolution bitmasks) and before the CB2_End*Battle
+    // callbacks decide whether to white out, so the sweep has already emptied
+    // the party by the time CB2_WhiteOut is reached.
+    NuzlockeOnBattleEnd();
+
     if (!(gBattleTypeFlags & BATTLE_TYPE_LINK))
     {
         CalculatePlayerPartyCount();

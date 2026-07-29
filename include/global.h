@@ -24,7 +24,9 @@
 #include "constants/trainer_tower.h"
 #include "constants/items.h"
 #include "constants/moves.h"
+#include "constants/region_map_sections.h"
 #include "config/save.h"
+#include "config/nuzlocke.h"
 
 // Prevent cross-jump optimization.
 #define BLOCK_CROSS_JUMP asm("");
@@ -270,6 +272,14 @@ struct SaveBlock3
     u8 dexNavChain;
 #if APRICORN_TREE_COUNT > 0
     u8 apricornTrees[NUM_APRICORN_TREE_BYTES];
+#endif
+#if NUZLOCKE_ENABLED == TRUE
+    // Nuzlocke rules engine (docs/overhaul/REGISTRY.md 3). 2 bits of route
+    // state per MAPSEC + 3 bytes of run state = 56 bytes at MAPSEC_COUNT 210.
+    u8 nuzlockeRoutes[NUZLOCKE_ROUTE_BYTES];
+    u8 nuzlockeRunState;
+    u8 nuzlockeCatches;
+    u8 nuzlockeDeaths;
 #endif
 }; /* max size 1624 bytes */
 

@@ -74,6 +74,7 @@
 #include "constants/union_room.h"
 #include "constants/weather.h"
 #include "randomizer.h"
+#include "nuzlocke.h"
 
 extern u16 gSpecialVar_ItemId;
 
@@ -2536,6 +2537,9 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
         case MON_DATA_DAYS_SINCE_FORM_CHANGE:
             retVal = boxMon->daysSinceFormChange;
             break;
+        case MON_DATA_IS_DEAD:
+            retVal = boxMon->isDead;
+            break;
         default:
             break;
         }
@@ -2970,6 +2974,9 @@ void SetBoxMonData(struct BoxPokemon *boxMon, s32 field, const void *dataArg)
         case MON_DATA_DAYS_SINCE_FORM_CHANGE:
             SET8(boxMon->daysSinceFormChange);
             break;
+        case MON_DATA_IS_DEAD:
+            SET8(boxMon->isDead);
+            break;
         }
     }
 
@@ -3014,6 +3021,15 @@ u8 CopyMonToPC(struct Pokemon *mon)
 
     do
     {
+        // Nuzlocke: the graveyard box is never a destination for living mons.
+        if (NuzlockeIsGraveyardBox(boxNo))
+        {
+            boxNo++;
+            if (boxNo == TOTAL_BOXES_COUNT)
+                boxNo = 0;
+            continue;
+        }
+
         for (boxPos = 0; boxPos < IN_BOX_COUNT; boxPos++)
         {
             struct BoxPokemon *checkingMon = GetBoxedMonPtr(boxNo, boxPos);
@@ -3531,6 +3547,15 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, u8 partyIndex, 
 
     // Skip using the item if it won't do anything
     if (GetItemEffect(item) == NULL && item != ITEM_ENIGMA_BERRY_E_READER)
+        return TRUE;
+
+    // Nuzlocke rule 9: fainted means dead, so Revive/Max Revive/Revival Herb/
+    // Sacred Ash are inert for the player. Enemy AI item use is untouched.
+    if (!usedByAI && NuzlockeIsBlockedReviveItem(item))
+        return TRUE;
+
+    // Nuzlocke rule 7: nothing works on a Pokémon that is already dead.
+    if (!usedByAI && NuzlockeIsMonDead(mon))
         return TRUE;
 
     // Get item effect

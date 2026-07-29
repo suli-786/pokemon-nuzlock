@@ -8,7 +8,9 @@
 // These values re-freeze the layout: any future unintended shift still fails here.
 #define T_SAVEBLOCK1_SIZE 13180
 #define T_SAVEBLOCK2_SIZE 2544
-#define T_SAVEBLOCK3_SIZE 4
+// Phase 3: +56 B for the nuzlocke rules engine (53 B route table at 2 bits per
+// MAPSEC, + runState/catches/deaths). See docs/overhaul/REGISTRY.md 3.
+#define T_SAVEBLOCK3_SIZE 60
 #define T_POKEMONSTORAGE_SIZE 34144
 
 TEST("SaveBlock1 is backwards compatible")

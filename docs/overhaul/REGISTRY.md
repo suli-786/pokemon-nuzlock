@@ -14,7 +14,7 @@ Pool: 375+ `FLAG_UNUSED_0x*` ids in `include/constants/flags.h` (+ `DAILY_FLAGS`
 | — Route 103 Old Rod NPC (no new flag) | reuses `FLAG_RECEIVED_OLD_ROD` | economy NPCs | shares Dewford's vanilla flag so double rods are impossible (Phase 2a) |
 | — randomizer feature flags (0x020..0x026, referenced not renamed) | `FLAG_UNUSED_0x020`–`0x026` | randomizer | `RANDOMIZER_FLAG_{WILD_MON,FIELD_ITEMS,TRAINER_MON,FIXED_MON,STARTER_AND_GIFT_MON,EGG_MON,ABILITIES}` via `include/config/randomizer.h`; inert while `RANDOMIZER_AVAILABLE` is FALSE |
 | — reserved block: QoL toggles (0x267..0x26B) | TBD at assignment | dialog/encounters | `I_EXP_SHARE_FLAG`, `OW_FLAG_POKE_RIDER`, spares (`FLAG_TEXT_SPEED_INSTANT` unneeded — instant text is global); 0x266 was consumed by the Quartermaster (row above) |
-| — reserved block: nuzlocke (≤8 flags) | TBD | nuzlocke engine | run-active, mode bits, `WE_FLAG_NO_CATCHING` dupe gate |
+| — nuzlocke engine: **0 flags claimed** (reservation released) | — | nuzlocke engine | Phase 3 shipped with all state in SaveBlock3 (see §3). Run-active/run-failed are `NuzlockeIsRunFailed()`; the dupe ball-block is a custom `BALL_THROW_UNABLE_NUZLOCKE_DUPE` state in `GetBallThrowableState`, **not** `WE_FLAG_NO_CATCHING` — that define stays 0 and free |
 | — reserved block: quizzes (contiguous run, size TBD by NPC count) | TBD | quiz NPCs | one-time reward flags; daily quizzes use `DAILY_FLAGS` |
 | — reserved block: wagers (≤16 flags) | TBD | wager battles | per-NPC wager-completed flags |
 | — reserved: AI/dev (≤2) | TBD | ai-quality | `B_FLAG_AI_VS_AI_BATTLE` |
@@ -27,7 +27,7 @@ Pool: 29 `VAR_UNUSED_0x40*` in `include/constants/vars.h`.
 |---|---|---|
 | 1 × var | ai-quality | `B_VAR_DIFFICULTY` |
 | 1 × var | dialog-speed | `VAR_LAST_REPEL_LURE_USED` |
-| ≤2 × vars | nuzlocke | settings bitmask, run state |
+| — nuzlocke: **0 vars claimed** (reservation released) | nuzlocke | Phase 3 put settings in `include/config/nuzlocke.h` (compile-time) and run state in SaveBlock3 |
 | ≤2 × vars | quiz/wager | tier/session scratch |
 | `VAR_UNUSED_0x404E` (referenced not renamed) | randomizer | `RANDOMIZER_VAR_SPECIES_MODE` via `include/config/randomizer.h`; inert while `RANDOMIZER_AVAILABLE` is FALSE |
 | `VAR_UNUSED_0x40FA`/`0x40FB` (conditional) | randomizer | seed storage only if `RANDOMIZER_SEED_IS_TRAINER_ID` is set to FALSE (default: seed = trainer ID, no vars used) |
@@ -46,14 +46,22 @@ Measured at Phase 0 (see `src/save.c:80-83` STATIC_ASSERTs — the build fails i
 
 SaveBlock3 reservations (target ≤1300 B, keep ≥300 B margin for upstream merges — upstream also adds SB3 fields):
 
-| Reservation | Bytes | Module |
-|---|---|---|
-| Route tracker: 4-bit status × ~90 MAPSECs | 45 | nuzlocke tracker |
-| Graveyard: 32 × 16 B entries | 512 | nuzlocke tracker |
-| Nuzlocke run state (seed echo, settings, counters) | ~32 | nuzlocke engine |
-| Run seed (u32) | 4 | randomizer |
-| Wager ledger (staked-mon records, small) | ~32 | wager battles |
-| **Total planned** | **~625** | leaves ~995 B |
+| Reservation | Bytes | Module | Status |
+|---|---|---|---|
+| `nuzlockeRoutes[]` — 2-bit route state × `MAPSEC_COUNT` (210) | **53** | nuzlocke engine | **CLAIMED (Phase 3)** — `NUZLOCKE_ROUTE_BYTES` in `include/config/nuzlocke.h`; 4 states: unused/caught/killed/fled |
+| `nuzlockeRunState` + `nuzlockeCatches` + `nuzlockeDeaths` (u8 each) | **3** | nuzlocke engine | **CLAIMED (Phase 3)** |
+| Graveyard | 0 | nuzlocke engine | **not needed** — Phase 3 uses PC box 13 (`TOTAL_BOXES_COUNT - 1`, renamed "GRAVE") plus a repurposed `BoxPokemon` bit, so zero SB3 cost |
+| Run seed (u32) | 4 | randomizer | reserved (seed is currently the trainer ID) |
+| Wager ledger (staked-mon records, small) | ~32 | wager battles | reserved |
+| Tracker UI scratch (Phase 5) | ~16 | nuzlocke tracker | reserved |
+| **Total claimed so far** | **56** | | SaveBlock3 = **60 B** of 1624 (`test/save.c` `T_SAVEBLOCK3_SIZE`) |
+
+**Bitfield claims outside the SaveBlocks:**
+
+| Bit | Was | Module | Purpose |
+|---|---|---|---|
+| `struct BoxPokemon.isDead:1` (`include/pokemon.h`) | `unused_13:1` | nuzlocke engine | permadeath marker, readable via `MON_DATA_IS_DEAD`. This was the **last free bit in `BoxPokemon`** — any other workstream that wants a per-mon bit now needs a different home. |
+| PC box `TOTAL_BOXES_COUNT - 1` (box 13) | box "BOX14" | nuzlocke engine | the graveyard. `CopyMonToPC`, `IsDestinationBoxFull`, `TryStorePartyMonInBox` and `UpdateBoxToSendMons` all skip it, so living Pokémon never land there. |
 
 **Banned by ledger:** `USE_DEXNAV_SEARCH_LEVELS` (~1500 B — does not fit alongside the tracker; DexNav itself is fine). `OW_SHOW_ITEM_DESCRIPTIONS=FIRST_TIME` (SB3 cost, use ALWAYS mode). `FNPC_ENABLE_NPC_FOLLOWERS` grows SB3 — claim a row first if ever wanted.
 
@@ -66,8 +74,8 @@ Every ported branch/asset/tutorial gets a row when its code lands (CREDITS.md ge
 | Source / author | What we take | Status |
 |---|---|---|
 | RHH pokeemerald-expansion | base + everything | in CREDITS.md already |
-| devolov (pret wiki nuzlocke tutorial) | nuzlocke design | pending port |
-| NecroDingo (nuzlocke-challenge branch) | nuzlocke engine patterns | pending port; courtesy ask |
+| devolov (pret wiki nuzlocke tutorial) | nuzlocke design: dead-bit-in-BoxPokemon, location consolidation, 3-state encounter check | Phase 3 reimplemented from scratch against 1.16.3 — no code lifted, design credit owed |
+| NecroDingo (nuzlocke-challenge branch) | nuzlocke engine patterns: hook-site map, dupes/shiny clause shape | Phase 3 reimplemented from scratch — no code lifted, design credit owed; courtesy ask still optional |
 | TheXaman | tracker storage scheme, registered-items menu, options-plus | pending |
 | iriv24 | registered-items expansion update | pending |
 | fisham33 | select-mons (pick-4), battle-mode toggle | pending |

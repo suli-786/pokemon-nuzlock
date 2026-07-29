@@ -61,6 +61,7 @@ enum {
     BALL_THROW_UNABLE_SEMI_INVULNERABLE,
     BALL_THROW_ABLE,
     BALL_THROW_UNABLE_DISABLED_FLAG,
+    BALL_THROW_UNABLE_NUZLOCKE_DUPE, // Nuzlocke rule 2: species/evo family already owned
 };
 
 bool32 CanThrowBall(void);

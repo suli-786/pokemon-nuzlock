@@ -43,6 +43,7 @@
 #include "wild_encounter.h"
 #include "rtc.h"
 #include "party_menu.h"
+#include "nuzlocke.h"
 #include "battle_arena.h"
 #include "battle_pike.h"
 #include "battle_pyramid.h"
@@ -10273,6 +10274,10 @@ static void Cmd_givecaughtmon(void)
         // Copy changedSpecies to allow caught mon to revert to its original species.
         if (emptySlot != PARTY_SIZE)
             gBattleStruct->partyState[B_SIDE_PLAYER][emptySlot].changedSpecies = GetBattlerPartyState(GetCatchingBattler())->changedSpecies;
+
+        // Nuzlocke rule 4: record the catch the moment it lands, so the route's
+        // slot is right even if the battle-end path is short-circuited.
+        NuzlockeOnMonCaught();
 
         gBattleResults.caughtMonSpecies = GetMonData(caughtMon, MON_DATA_SPECIES);
         GetMonData(caughtMon, MON_DATA_NICKNAME, gBattleResults.caughtMonNick);

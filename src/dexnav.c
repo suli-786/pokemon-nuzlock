@@ -49,6 +49,7 @@
 #include "text.h"
 #include "text_window.h"
 #include "wild_encounter.h"
+#include "nuzlocke.h"
 #include "window.h"
 #include "constants/species.h"
 #include "constants/maps.h"
@@ -845,6 +846,13 @@ static bool8 InitDexNavSearch(enum Species species, u32 environment)
     }
     FlagSet(DN_FLAG_SEARCHING);
 
+    // Nuzlocke rule 5: a spent route yields nothing to the DexNav either.
+    if (NuzlockeSuppressWildEncounters())
+    {
+        DexNavSearchBail(EventScript_NotFoundNearby);
+        return TRUE;
+    }
+
     // assign non-objects to struct
     sDexNavSearchDataPtr->species = species;
     sDexNavSearchDataPtr->environment = environment;  //updated in DexNavTryGenerateMonLevel if hidden mon
@@ -1257,7 +1265,10 @@ static void DexNavGenerateMoveset(enum Species species, u8 searchLevel, u8 encou
     }
 
     // Generate a wild mon just to get the initial moveset (later overwritten by CreateDexNavWildMon)
+    // This one never becomes a battle, so the nuzlocke engine must ignore it.
+    NuzlockeSuspendClassification(TRUE);
     CreateWildMon(species, encounterLevel);
+    NuzlockeSuspendClassification(FALSE);
 
     // Store generated mon moves into Dex Nav Struct
     for (i = 0; i < MAX_MON_MOVES; i++)
@@ -2491,6 +2502,10 @@ bool32 TryFindHiddenPokemon(void)
         enum EncounterType environment;
 
         if (headerId == HEADER_NONE)
+            return FALSE;
+
+        // Nuzlocke rule 5.
+        if (NuzlockeSuppressWildEncounters())
             return FALSE;
 
         enum TimeOfDay timeOfDay = GetTimeOfDayForEncounters(headerId, WILD_AREA_HIDDEN);

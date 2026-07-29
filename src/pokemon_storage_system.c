@@ -25,6 +25,7 @@
 #include "palette.h"
 #include "pc_screen_effect.h"
 #include "pokemon.h"
+#include "nuzlocke.h"
 #include "pokemon_icon.h"
 #include "pokemon_summary_screen.h"
 #include "pokemon_storage_system.h"
@@ -1713,6 +1714,8 @@ void ResetPokemonStorageSystem(void)
         u8 *dest = StringCopy(GetBoxNamePtr(boxId), gText_Box);
         ConvertIntToDecimalStringN(dest, boxId + 1, STR_CONV_MODE_LEFT_ALIGN, 2);
     }
+    // Nuzlocke rule 7: the last box is the graveyard.
+    NuzlockeSetUpGraveyardBox();
 
     for (boxId = 0; boxId < TOTAL_BOXES_COUNT; boxId++)
         SetBoxWallpaper(boxId, boxId % (MAX_DEFAULT_WALLPAPER + 1));
@@ -2385,6 +2388,13 @@ static void Task_PokeStorageMain(u8 taskId)
             SetPokeStorageTask(Task_SwitchSelectedItem);
             break;
         case INPUT_MULTIMOVE_START:
+            // Nuzlocke rule 7: multi-move bypasses the per-mon gate, so the
+            // graveyard box refuses group grabs outright.
+            if (NuzlockeIsGraveyardBox(StorageGetCurrentBox()))
+            {
+                PlaySE(SE_FAILURE);
+                break;
+            }
             PlaySE(SE_SELECT);
             MultiMove_SetFunction(MULTIMOVE_START);
             sStorage->state = MSTATE_MULTIMOVE_RUN;
@@ -4278,6 +4288,10 @@ static bool8 DoShowPartyMenu(void)
 
 static void UpdateBoxToSendMons(void)
 {
+    // Nuzlocke: never aim new catches at the graveyard box.
+    if (NuzlockeIsGraveyardBox(StorageGetCurrentBox()))
+        return;
+
     if (sLastUsedBox != StorageGetCurrentBox())
     {
         FlagClear(FLAG_SHOWN_BOX_WAS_FULL_MESSAGE);
@@ -6491,7 +6505,13 @@ static void SetShiftedMonData(u8 boxId, u8 position)
 
 static bool8 TryStorePartyMonInBox(u8 boxId)
 {
-    s16 boxPosition = GetFirstFreeBoxSpot(boxId);
+    s16 boxPosition;
+
+    // Nuzlocke: the graveyard only takes the dead, and only via the sweep.
+    if (NuzlockeIsGraveyardBox(boxId))
+        return FALSE;
+
+    boxPosition = GetFirstFreeBoxSpot(boxId);
     if (boxPosition == -1)
         return FALSE;
 
@@ -7758,6 +7778,15 @@ static u8 SetSelectionMenuTexts(void)
 static bool8 SetMenuTexts_Mon(void)
 {
     enum Species species = GetSpeciesAtCursorPosition();
+
+    // Nuzlocke rule 7: the dead cannot be withdrawn, moved, shifted or picked.
+    // Refusing here kills the A-press for every box option at once, in both
+    // the menu and auto-action flows.
+    if (sCursorArea == CURSOR_AREA_IN_BOX && NuzlockeIsBoxMonDead(GetCursorBoxMon()))
+    {
+        PlaySE(SE_FAILURE);
+        return FALSE;
+    }
 
     switch (sStorage->boxOption)
     {

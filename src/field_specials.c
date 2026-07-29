@@ -37,6 +37,7 @@
 #include "pokeblock.h"
 #include "pokedex.h"
 #include "pokemon.h"
+#include "nuzlocke.h"
 #include "pokemon_storage_system.h"
 #include "pokemon_summary_screen.h"
 #include "random.h"
@@ -3494,6 +3495,14 @@ bool8 IsDestinationBoxFull(void)
     box = StorageGetCurrentBox();
     do
     {
+        // Nuzlocke: the graveyard box is never a destination for living mons.
+        if (NuzlockeIsGraveyardBox(box))
+        {
+            if (++box == TOTAL_BOXES_COUNT)
+                box = 0;
+            continue;
+        }
+
         for (i = 0; i < IN_BOX_COUNT; i++)
         {
             if (GetBoxMonData(GetBoxedMonPtr(box, i), MON_DATA_SPECIES, 0) == SPECIES_NONE)

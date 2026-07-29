@@ -6,6 +6,7 @@
 #include "event_object_movement.h"
 #include "field_message_box.h"
 #include "field_poison.h"
+#include "nuzlocke.h"
 #include "fldeff_misc.h"
 #include "frontier_util.h"
 #include "party_menu.h"
@@ -90,8 +91,16 @@ static void Task_TryFieldPoisonWhiteOut(u8 taskId)
             tState--;
         break;
     case 2:
+        // Nuzlocke rule 7: a faint outside battle is still death. (Inert while
+        // OW_POISON_DAMAGE >= GEN_5, which stops overworld poison damage
+        // entirely, but the path is kept correct.)
+        NuzlockeSweepFaintedParty();
         if (AllMonsFainted())
         {
+        #if NUZLOCKE_GAME_OVER_ON_WIPE == TRUE
+            // Rule 8: a wipe is a wipe, however it happened.
+            NuzlockeSetRunFailed();
+        #endif
             // Battle facilities have their own white out script to handle the challenge loss
 #ifdef BUGFIX
             if (CurrentBattlePyramidLocation() || InBattlePike() || InTrainerHillChallenge())

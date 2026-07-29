@@ -31,6 +31,7 @@
 #include "constants/items.h"
 #include "constants/battle_frontier.h"
 #include "randomizer.h"
+#include "nuzlocke.h"
 
 static void CB2_ReturnFromChooseHalfParty(void);
 static void CB2_ReturnFromChooseBattleFrontierParty(void);
@@ -40,7 +41,12 @@ void HealPlayerParty(void)
 {
     u32 i;
     for (i = 0; i < gPartiesCount[B_TRAINER_PLAYER]; i++)
+    {
+        // Nuzlocke rule 7: the dead are never healed.
+        if (NuzlockeIsMonDead(&gParties[B_TRAINER_PLAYER][i]))
+            continue;
         HealPokemon(&gParties[B_TRAINER_PLAYER][i]);
+    }
     if (OW_PC_HEAL >= GEN_8)
         HealPlayerBoxes();
 
@@ -59,7 +65,8 @@ static void HealPlayerBoxes(void)
         for (boxPosition = 0; boxPosition < IN_BOX_COUNT; boxPosition++)
         {
             boxMon = &gPokemonStoragePtr->boxes[boxId][boxPosition];
-            if (GetBoxMonData(boxMon, MON_DATA_SANITY_HAS_SPECIES))
+            // Nuzlocke rule 7: the dead are never healed.
+            if (GetBoxMonData(boxMon, MON_DATA_SANITY_HAS_SPECIES) && !NuzlockeIsBoxMonDead(boxMon))
                 HealBoxPokemon(boxMon);
         }
     }

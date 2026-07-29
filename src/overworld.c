@@ -47,6 +47,7 @@
 #include "mirage_tower.h"
 #include "money.h"
 #include "new_game.h"
+#include "nuzlocke.h"
 #include "oras_dowse.h"
 #include "palette.h"
 #include "play_time.h"
@@ -1953,6 +1954,10 @@ void CB2_NewGame(void)
 void CB2_WhiteOut(void)
 {
     u8 state;
+
+    // Nuzlocke rule 8: a party wipe ends the run outright. The save is kept.
+    if (NuzlockeTryStartRunOverScreen())
+        return;
 
     if (++gMain.state >= 120)
     {

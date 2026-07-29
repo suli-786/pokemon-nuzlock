@@ -31,6 +31,7 @@
 #include "constants/layouts.h"
 #include "constants/weather.h"
 #include "randomizer.h"
+#include "nuzlocke.h"
 
 extern const u8 EventScript_SprayWoreOff[];
 
@@ -470,6 +471,12 @@ void CreateWildMon(enum Species species, u8 level)
     u32 personality = GetMonPersonality(species, GetSynchronizedGender(WILDMON_ORIGIN, species), PickWildMonNature(species), RANDOM_UNOWN_LETTER);
     CreateMonWithIVs(&gParties[B_TRAINER_OPPONENT_A][0], species, level, personality, OTID_STRUCT_PLAYER_ID, USE_RANDOM_IVS);
     GiveMonInitialMoveset(&gParties[B_TRAINER_OPPONENT_A][0]);
+    // Nuzlocke rules 2/3/4. Every wild generation path (walking, surfing,
+    // fishing, Rock Smash, Sweet Scent, mass outbreaks, DexNav) funnels through
+    // here, and the randomizer has already substituted `species` upstream in
+    // TryGenerateWildMon/GenerateFishingWildMon, so this always classifies the
+    // final species. Shininess is only knowable once the mon exists.
+    NuzlockeClassifyWildEncounter();
 }
 
 #ifdef BUGFIX
@@ -668,6 +675,12 @@ bool8 StandardWildEncounter(u16 curMetatileBehavior, u16 prevMetatileBehavior)
     if (sWildEncountersDisabled == TRUE)
         return FALSE;
 
+    // Nuzlocke rule 5: this route's encounter has already been used.
+    // Deliberately separate from WE_FLAG_NO_ENCOUNTER, which stays the
+    // player's manual Repellant toggle.
+    if (NuzlockeSuppressWildEncounters())
+        return FALSE;
+
     headerId = GetCurrentMapWildMonHeaderId();
     if (headerId == HEADER_NONE)
     {
@@ -810,6 +823,13 @@ void RockSmashWildEncounter(void)
     u32 headerId = GetCurrentMapWildMonHeaderId();
     enum TimeOfDay timeOfDay;
 
+    // Nuzlocke rule 5.
+    if (NuzlockeSuppressWildEncounters())
+    {
+        gSpecialVar_Result = FALSE;
+        return;
+    }
+
     if (headerId != HEADER_NONE)
     {
         timeOfDay = GetTimeOfDayForEncounters(headerId, WILD_AREA_ROCKS);
@@ -852,6 +872,10 @@ bool8 SweetScentWildEncounter(void)
     s16 x, y;
     u32 headerId;
     enum TimeOfDay timeOfDay;
+
+    // Nuzlocke rule 5.
+    if (NuzlockeSuppressWildEncounters())
+        return FALSE;
 
     PlayerGetDestCoords(&x, &y);
     headerId = GetCurrentMapWildMonHeaderId();
@@ -931,8 +955,15 @@ bool8 SweetScentWildEncounter(void)
 
 bool8 DoesCurrentMapHaveFishingMons(void)
 {
-    u32 headerId = GetCurrentMapWildMonHeaderId();
-    enum TimeOfDay timeOfDay = GetTimeOfDayForEncounters(headerId, WILD_AREA_FISHING);
+    u32 headerId;
+    enum TimeOfDay timeOfDay;
+
+    // Nuzlocke rule 5: the rod still casts, but nothing ever bites.
+    if (NuzlockeSuppressWildEncounters())
+        return FALSE;
+
+    headerId = GetCurrentMapWildMonHeaderId();
+    timeOfDay = GetTimeOfDayForEncounters(headerId, WILD_AREA_FISHING);
 
     if (headerId != HEADER_NONE && gWildMonHeaders[headerId].encounterTypes[timeOfDay].fishingMonsInfo != NULL)
         return TRUE;

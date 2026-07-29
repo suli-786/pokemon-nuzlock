@@ -1,6 +1,7 @@
 #include "global.h"
 #include "clock.h"
 #include "new_game.h"
+#include "nuzlocke.h"
 #include "random.h"
 #include "pokemon.h"
 #include "roamer.h"
@@ -242,6 +243,7 @@ void NewGameInitData(void)
     #endif
     ResetItemFlags();
     ResetDexNav();
+    NuzlockeInitNewRun();
     ClearFollowerNPCData();
 }
 
