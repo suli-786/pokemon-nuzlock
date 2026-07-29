@@ -18,6 +18,16 @@
 #define SWSH_MESSAGE_BOX        TRUE    // Sword/Shield style message box + name box. Tuning: include/menu.h, include/config/name_box.h
 #define SWSH_ITEM_MENU          TRUE    // Sword/Shield style bag screen.            Tuning: include/swsh_item_menu.h
 #define SWSH_BATTLE_UI          TRUE    // Sword/Shield style battle HUD.            Tuning: include/menu.h, src/battle_interface.c
+#define SWSH_FLAT_TEXT          TRUE    // Drop the bevel behind glyphs.             Tuning: src/text.c, GenerateFontHalfRowLookupTable
+
+// SWSH_FLAT_TEXT is the closest the GBA can get to the Sword/Shield text look.
+// The real thing is FOT-UDKakugo Large Pr6N (Fontworks, commercial), and it
+// could not be used even if it were free: a capital letter here gets 5 pixels
+// of width and 9 of height, and widening the advance would overflow every
+// hand-wrapped line of dialogue in the game. Rasterising a real typeface into
+// 5x9 was tried and rejected -- the counters fill in, so O reads as C. What
+// does modernise the text is losing the grey drop shadow every glyph carries,
+// which is what Gen 5 onwards did. See docs/overhaul/UI_PORT_CHECKLIST.md.
 
 // SWSH_BATTLE_UI is the least finished of the six: see docs/overhaul/UI_PORT_CHECKLIST.md
 // §3.6.10 for the "known unfinished" list. Flipping it FALSE restores the stock battle

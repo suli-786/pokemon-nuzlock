@@ -649,6 +649,26 @@ static u32 RenderFont(struct TextPrinter *textPrinter)
 
 void GenerateFontHalfRowLookupTable(union TextColor color)
 {
+#if SWSH_FLAT_TEXT == TRUE
+    // Glyphs are 2bpp: 0 outside the advance box, 1 text, 2 shadow, 3 the box's
+    // own blank interior. Painting the shadow in the accent colour makes those
+    // pixels indistinguishable from the blank interior, so the bevel disappears
+    // whatever palette the window is using -- no artwork changes, no per-caller
+    // edits, and it survives every window fill because it is the same value the
+    // rest of the glyph box already renders as.
+    //
+    // Only the decorative shadow goes. White text drawn straight over graphics
+    // (map name pop-up, healthbox, sprite text) uses a *dark* shadow as its
+    // contrast outline and would be unreadable without it, so the flattening is
+    // gated on the light-grey shadow that means "bevel on a light window".
+    //
+    // This runs before the sLastTextColor check on purpose: the cache must key
+    // on the colour actually used, or a flattened and an unflattened request for
+    // the same glyphs would alias.
+    if (color.shadow == TEXT_COLOR_LIGHT_GRAY)
+        color.shadow = color.accent;
+#endif
+
     if (color.asU32 == sLastTextColor.asU32)
     {
         return;

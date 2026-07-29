@@ -36,6 +36,7 @@ Roughly **half the wishlist already exists in the expansion as config switches**
 | Skip RHH splash | `EXPANSION_INTRO` → FALSE | `include/config/general.h:76` | |
 | Reusable TMs, indoor running, last-ball R-hotkey, catch-swap | mostly already on | `include/config/item.h`, `overworld.h`, `battle.h` | See ws_dialog-speed.md for the full QoL sweep |
 | New-game skip (dev) | `ENABLE_QUICKSTART` — already ON; debug "Cheat start" | `include/config/quickstart.h`, `data/scripts/debug.inc:11` | Both compiled out on RELEASE builds — see decision D8 |
+| Flat (Gen 5+) text, no glyph bevel | `SWSH_FLAT_TEXT` → TRUE | `include/config/swsh_ui.h`, one branch in `src/text.c` | The only "SwSh font" that fits — see §7.18 for why a typeface swap is off the table |
 
 **Caveat:** Quickstart and all debug menus are `DISABLED_ON_RELEASE`. Either ship dev builds or strip the guards.
 
@@ -265,6 +266,16 @@ Owner's design: shops become the evolution-item source — they were useless (Po
 - **Quiz NPCs:** ALL filler NPCs become quizzes; questions may be static per NPC. Details deferred.
 - **Legendaries:** copy Randolocke's channels (statics pre-gym-8, map seller, E4-victory gift) but **all legendary statics at level 64** (the cap), not vanilla levels.
 - **Cave of Origin: EXCLUDED** (from pools, routes, and the map — blocker NPC stays). Standing principle: when story content is in doubt, exclude it.
+
+### 7.18 Text font — why there is no "Sword/Shield font" (v27, 2026-07-29)
+
+Owner asked for the Sword/Shield font. Investigated and **rejected the typeface swap on evidence**; shipped the flat-text treatment instead (`SWSH_FLAT_TEXT`).
+
+- **The real font is unobtainable.** SwSh's UI typeface is FOT-UDKakugo Large Pr6N (DB) by Fontworks — commercial, no free release. No SwSh font port exists for pokeemerald either: all nine `montblanc/*` branches leave `graphics/fonts/latin_*.png` alone (only `swsh_summary_screen` adds FRLG *number* sheets, and `swsh_message_box` only retouches the down-arrows).
+- **The grid forbids it anyway.** Measured off the vanilla sheets: a capital gets **5 ink columns × 9 rows** (advance 6, rightmost column reserved for the shadow); `short` is 5×8 and `small` is 5×7. Widening the advance is not available — dialogue is hand-wrapped with `\n`/`\l`, so wider glyphs overflow every box and menu in the game.
+- **Tested, not assumed.** Built a rasteriser (vanilla advance widths preserved exactly, so layout is bit-identical) and fitted BIZ UDPGothic Regular/Bold (Morisawa, OFL — the closest free analogue to UD Kakugo) and Noto Sans, at both vanilla cap height (condensed ~0.65×) and natural proportions. Every variant lost to vanilla: at 5px the counters fill in, so `O` renders as `C` — "POKeMON" reads "PCKeMCN". Natural proportions stay open but drop to a 6–7px cap height, which reads as small and gappy.
+- **What shipped.** The bevel behind every glyph is the most dated thing about the text; Gen 5 onward is flat. One branch in `GenerateFontHalfRowLookupTable` (`src/text.c`) repaints the shadow in the *accent* colour, which is by construction the glyph box's own blank interior — so it disappears against any window palette with no artwork edits and no per-caller changes. Verified against `B_WIN_MSG` in `src/battle_message.c`, which sets `background = accent = 15` alongside `fillValue = PIXEL_FILL(0xF)`.
+- **Scoping.** Gated on `color.shadow == TEXT_COLOR_LIGHT_GRAY`, i.e. the decorative bevel on a light window. White text drawn straight over graphics (map pop-up, healthbox, sprite text) uses a *dark* shadow as its contrast outline and is deliberately left alone — as are the battle windows, which use shadow 6/15.
 
 ### Phase mapping for v2 items
 Phase 1-2: 7.2, 7.5 (clock, Box Link), Repellent item · Phase 3: 7.3 (engine+auto-suppress), 7.4 · Phase 4: randomizer incl. items + quiz assignment + 7.9 pool generation · Phase 5: tracker UI (7.3) · Phase 6: gyms incl. preview screen + pick-4 · Phase 7: 7.6, 7.7, 7.10 · Phase 8: quizzes + 7.8 wagers · Phase 9: UI suite incl. 7.1 register bag + 7.11 + sprites/backgrounds.
