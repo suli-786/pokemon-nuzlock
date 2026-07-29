@@ -98,7 +98,8 @@ Every ported branch/asset/tutorial gets a row when its code lands (CREDITS.md ge
 | resetes12 (Modern Emerald) | challenges viewer reference, nuzlocke indicator art | **ask before using art** |
 | huderlem | Poryscript (MIT) | pending |
 | Smogon / @pkmn (data.pkmn.cc) | gym set data via converter | pending |
-| PokeCommunity sprite threads (DS-style 64x64, Platinum OW/trainer pack) | sprite assets | **read thread rules manually first** |
+| PokeCommunity sprite threads (DS-style 64x64) | sprite assets | **read thread rules manually first** |
+| spilledpizza (creator), with TheWiggliestJiggliest, RichardPT, robloxmaster376, [The Spriters Resource](https://www.spriters-resource.com/), and the Radiant Quartz / Prismatic Platinum team — [Platinum OW + trainer sprite pack](https://www.pokecommunity.com/threads/platinum-ow-trainer-sprite-pack-for-pokeemerald-pokefirered.537257/) | 95 Platinum trainer front pics, 2 back pics (Dawn/Lucas), 70 Platinum overworld NPC sheets + 65 palettes | **landed** (Phase 4 art). 35 front pics + 16 overworld sheets replace the matching generic Hoenn classes in place; 60 front pics, 2 back pics and 54 overworld sheets are newly registered and unassigned. Hand-merged — none of the pack's six source files were copied over ours; new `OBJ_EVENT_GFX_DP_*` / `OBJ_EVENT_PAL_TAG_DP_*` (0x1170–0x11B0) entries were written against our 1.16.3 macros with follower support intact. |
 
 ## 5. Module conventions (Phase 0 decision, from ws_architecture.md)
 

@@ -129,6 +129,15 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 - [larryturbo](https://www.deviantart.com/larryturbo)
 - [kidkatt](https://www.deviantart.com/kidkatt)
 
+### Platinum (DPP) Overworld + Trainer Sprite Pack:
+[Platinum OW/Trainer Sprite Pack for pokeemerald/pokefirered](https://www.pokecommunity.com/threads/platinum-ow-trainer-sprite-pack-for-pokeemerald-pokefirered.537257/)
+- spilledpizza (pack creator)
+- TheWiggliestJiggliest
+- RichardPT
+- robloxmaster376
+- [The Spriters Resource](https://www.spriters-resource.com/)
+- the Radiant Quartz / Prismatic Platinum team
+
 ## Resources
 - [Sugimori Palettes and Sprites](https://www.pokecommunity.com/showthread.php?t=336945)
 - [DS Style Gen VI Sprites](https://www.pokecommunity.com/showthread.php?t=314422)

@@ -66,3 +66,6 @@ tools/aif2pcm/aif2pcm
 *.smolTM
 __pycache__
 .map_version
+
+# Sprite pack source archive (assets are extracted into graphics/)
+SPRITEPACK-PLATINUM.zip
