@@ -247,6 +247,12 @@ Owner's design: shops become the evolution-item source — they were useless (Po
 ### 7.14 Bag in battle (v19 DECIDED)
 **Gym and E4 battles: bag fully disabled for BOTH sides** — player uses no items mid-battle, and gym trainers' AI-use items (vanilla "Items: Potion / Potion" lines) are stripped. Held items unaffected (clauses still apply). Porta Heal works only outside battle by nature. Other battle types (wilds, wagers) keep normal bag rules unless owner says otherwise.
 
+**Status (2026-07-29): AI half DONE, player half still pending.** All 45 gym-leader / Elite-Four / Champion blocks in `src/data/trainers.party` have had their `Items:` line deleted — 126 potions in total, from Roxanne's 2 Potions up to Wallace's 4 Full Restores, and 3 Full Restores on each of the 32 rematch variants (`_2`.. `_5`). Verified in generated `src/data/trainers.h`: those entries now emit no `.items` field at all. The rematch blocks were included so the set cannot silently diverge if rematches survive the story cut.
+
+Deliberately left carrying items, as outside this decision's scope: `TRAINER_STEVEN` (optional Meteor Falls superboss, 4 Full Restores), the `WALLY_VR_*` rematches, the Match Call rematch trainers, and Archie/Maxie (cut content anyway). 96 non-gym blocks keep their items.
+
+Still to do here: block the **player's** bag in gym/E4 battles. Nothing implements that yet — no gate exists in `src/battle_*`.
+
 ### 7.15 The three-tier system (v23 DECIDED — powers wagers & rewards)
 **Pokémon tiers** (judged by area-band BST + line potential): line reaches **480+** = POWERFUL · reaches **400+** = NORMAL · below = WEAK.
 **Item tiers**: POWERFUL = VGC-grade (Choice items, Life Orb class) · NORMAL · WEAK. **Berries and TMs are categorized into the same three tiers** (one-time hand-authored table).
