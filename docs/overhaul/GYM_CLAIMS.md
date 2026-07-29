@@ -11,7 +11,7 @@ Verified 2026-07-28 against `src/data/wild_encounters.json` (124 Emerald headers
 | **5 — Norman** | Badge 4 → Go-Goggles → desert | MIRAGE_TOWER_1F-4F + ROUTE111 desert land table |
 | **6 — Winona** | Badge 5 → **Surf**; Basement Key; Good Rod (Rte 118) | ROUTE105, ROUTE107, ROUTE108, ABANDONED_SHIP_ROOMS_B1F, NEW_MAUVILLE_ENTRANCE/INSIDE, ROUTE119, ROUTE120, ALTERING_CAVE + **every water table of earlier maps** + ROUTE118 grass + ROUTE115 grass *(both verified Surf-only)* |
 | **7 — Tate & Liza** | Badge 6 era; Super Rod (Mossdeep) | ROUTE121, ROUTE122, ROUTE123, LILYCOVE_CITY, MT_PYRE (1F-6F, exterior, summit), SAFARI_ZONE (S/SW/N/NW), MAGMA_HIDEOUT (all 8 maps), ROUTE124, MOSSDEEP_CITY, ROUTE125, SHOAL_CAVE (5 low-tide rooms), ROUTE126, ROUTE127, ROUTE128 |
-| **8 — Juan** | Badge 7 → **Dive** | UNDERWATER_ROUTE124/126, SOOTOPOLIS_CITY, CAVE_OF_ORIGIN_ENTRANCE/1F *(see Notes 3 — may be sealed)*, SEAFLOOR_CAVERN (entrance + rooms 1-8), ABANDONED_SHIP_HIDDEN_FLOOR_CORRIDORS, SKY_PILLAR_1F/3F/5F, ROUTE129-134, PACIFIDLOG_TOWN |
+| **8 — Juan** | Badge 7 → **Dive** | UNDERWATER_ROUTE124/126, SOOTOPOLIS_CITY, CAVE_OF_ORIGIN_ENTRANCE/1F *(blocker scripted open — see Notes 3)*, SEAFLOOR_CAVERN (entrance + rooms 1-8), ABANDONED_SHIP_HIDDEN_FLOOR_CORRIDORS, SKY_PILLAR_1F/3F/5F, ROUTE129-134, PACIFIDLOG_TOWN |
 | **E4** | Badge 8 → Waterfall | EVER_GRANDE_CITY, VICTORY_ROAD_1F/B1F/B2F, METEOR_FALLS_1F_2R/B1F_1R/B1F_2R |
 | **Post-game** | game clear | SAFARI_ZONE_SE/NE, METEOR_FALLS_STEVENS_CAVE, DESERT_UNDERPASS, ARTISAN_CAVE_1F/B1F |
 | **Unreachable** | — | 3 unused R/S Cave of Origin maps |
@@ -32,6 +32,6 @@ Verified 2026-07-28 against `src/data/wild_encounters.json` (124 Emerald headers
    - GRANITE_CAVE_B2F rock-smash = gym 4; darkness (Flash) doesn't block land tables (genuinely gym 2).
    - ROUTE130 land table = Mirage Island (daily RNG) — **exclude from generation**.
    - ALTERING_CAVE: only table 1 (Zubat) is live; tables 2-9 are unused event data — exclude.
-3. **Cave of Origin is likely sealed in this hack** — the entrance NPC only steps aside during arc crisis states that never occur with arcs pre-completed. Either script him away or exclude both maps from pools/nuzlocke routes. (Owner call, low stakes.)
+3. **Cave of Origin — DECIDED (2026-07-29): scripted open.** The entrance NPC only steps aside during arc crisis states that never occur with the arcs pre-completed, so left alone the maps would be unreachable. Owner's call is to clear the blocker rather than exclude the maps, so `CAVE_OF_ORIGIN_ENTRANCE`/`1F` stay in gym 8's pool and count as nuzlocke routes. Implementation belongs with Phase 4 step 4 (claim table → data): hide or bypass the blocker NPC the same way the New Game preset handles the other arc gates. Note this reverses the earlier standing principle "when story content is in doubt, exclude it" (ROADMAP §7.17) for this one map pair.
 4. Shoal Cave inner rooms follow the real-time tide cycle, not badges (kept in gym 7).
 5. Lower-confidence details (vanilla-knowledge, not script-verified): rod NPC locations, Safari-NW Mach Bike need — neither changes any assignment.
