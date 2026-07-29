@@ -288,6 +288,23 @@ Still to do here: block the **player's** bag in gym/E4 battles. Nothing implemen
 - **Legendaries:** copy Randolocke's channels (statics pre-gym-8, map seller, E4-victory gift) but **all legendary statics at level 64** (the cap), not vanilla levels.
 - **Cave of Origin: EXCLUDED** (from pools, routes, and the map — blocker NPC stays). Standing principle: when story content is in doubt, exclude it.
 
+### 7.19 Forced story still in the game, and what was cut (v28, 2026-07-30)
+
+**Wally escort + catch tutorial — CUT 2026-07-30.** Vanilla forces ~5 minutes of `lockall` on the first Petalburg Gym visit: Norman hands the player to Wally, you walk him to Route 102, watch him catch a Ralts, warp back, then his dad takes you home. Nothing is granted by any of it, and under the randomizer the Ralts is not a Ralts. Cut with two setvars in `Overhaul_EventScript_NewGamePreset`.
+
+**Two unwinnable-save traps sit in this cut** — both found by tracing every write to the two variables, neither visible from reading the scene:
+
+1. `VAR_PETALBURG_GYM_STATE` is not a story flag, it is **Norman's badge counter**. The tutorial seeds it at 1 and returning to the gym sets 2; Rustboro, Dewford, Mauville and Lavaridge then each `addvar 1`, and his doors open at exactly **6**. Leaving it 0 gives 0+4=4 — Norman's gym never opens and the run dies at badge 5, hours in. Must be seeded to **2**.
+2. `VAR_PETALBURG_CITY_STATE` must **not** be set to 5. State **4** arms the ON_FRAME in Wally's house that hands over **HM Surf** after Norman is beaten; 5 means "Surf already taken". Skipping to 5 deletes Surf from the run — no water, no gym 6, no second half of the map, no recovery. State **3** is "tutorial done, Surf still to come".
+
+Every Wally object is already hidden by vanilla's own new-game flag reset (`FLAG_HIDE_PETALBURG_CITY_WALLY` / `_GYM_WALLY` / `_CITY_WALLYS_DAD` / `_GYM_WALLYS_DAD`) and only the tutorial clears them, so cutting it leaves nobody stranded. The gym greeter is revealed from `data/event_scripts.s`, not this chain. The Mauville and Victory Road Wally battles read neither variable.
+
+**Playtest that cannot be automated:** confirm Norman's doors actually open at badge 5. The counter is right by inspection, but inspection is not a playthrough.
+
+**Time-savers audited (2026-07-30).** Phase 1 already landed instant text, auto-scroll, `B_WAIT_TIME_MULTIPLIER` 8 (half vanilla), no intro slide, fast HP/EXP bars, B-to-Run, reusable TMs, run indoors, no repeat map popups, Union Room check off. Still unclaimed: **`OW_FLAG_POKE_RIDER`** (press R on the region map to fly — probably the largest remaining wall-clock saver, since backtracking is most of a Hoenn run), **hold-to-skip dialogue** (~20-30 lines at `SetResultWithButtonPress`; yes/no and item-get are structurally immune per ws_dialog-speed.md), and **`I_EXP_SHARE_FLAG`** (party-wide exp — a real balance change against the level caps, so a design call not a freebie).
+
+**Not yet verified:** whether the Route 103 rival battle still fires correctly now the intro is skipped, and the full forced-beat list beyond Petalburg — the frame-trigger sweep returned mostly Union Rooms and Battle Frontier, so the remaining story triggers need a narrower pass.
+
 ### 7.18 Text font — why there is no "Sword/Shield font" (v27, 2026-07-29)
 
 Owner asked for the Sword/Shield font. Investigated and **rejected the typeface swap on evidence**; shipped the flat-text treatment instead (`SWSH_FLAT_TEXT`).

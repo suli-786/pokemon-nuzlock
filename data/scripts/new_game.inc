@@ -349,6 +349,34 @@ Overhaul_EventScript_NewGamePreset::
 	setvar VAR_ROUTE128_STATE, 2
 	setvar VAR_SKY_PILLAR_STATE, 3
 
+	@ --- Wally escort + catch tutorial cut ---
+	@ Vanilla forces ~5 minutes of lockall on the first Petalburg Gym visit:
+	@ Norman hands the player to Wally, you walk him to Route 102, watch him
+	@ catch a Ralts, warp back, then his dad takes you home. Nothing is granted
+	@ by any of it, and under the randomizer the Ralts is not even a Ralts.
+	@
+	@ Two traps make the obvious cut wrong, both verified by tracing every write
+	@ to these vars:
+	@
+	@ 1. VAR_PETALBURG_GYM_STATE is not a story flag, it is Norman's BADGE
+	@    COUNTER. The tutorial seeds it at 1 and returning to the gym sets 2;
+	@    Rustboro, Dewford, Mauville and Lavaridge then each addvar 1, and his
+	@    doors open at exactly 6. Leaving it at 0 gives 0+4=4, so Norman's gym
+	@    never opens and the run dies at badge 5. It must be seeded to 2.
+	@ 2. VAR_PETALBURG_CITY_STATE must NOT be set to 5. State 4 is what arms the
+	@    ON_FRAME in Wally's house that hands over HM SURF after Norman is beaten
+	@    (PetalburgCity_WallysHouse/scripts.inc), and 5 means "Surf already
+	@    taken". Skipping to 5 loses Surf permanently -- no water, no gym 6, no
+	@    second half of the map. State 3 is "tutorial done, Surf still to come".
+	@
+	@ Every Wally object here is already hidden by the vanilla flag reset above
+	@ (FLAG_HIDE_PETALBURG_CITY_WALLY / _GYM_WALLY / _CITY_WALLYS_DAD /
+	@ _GYM_WALLYS_DAD), and only the tutorial ever clears them, so cutting it
+	@ leaves nobody standing around. The gym greeter is revealed from
+	@ data/event_scripts.s, not from this chain, so he is unaffected.
+	setvar VAR_PETALBURG_CITY_STATE, 3
+	setvar VAR_PETALBURG_GYM_STATE, 2
+
 	@ --- No line-of-sight trainer battles ---
 	@ OW_FLAG_NO_TRAINER_SEE is wired to this flag in include/config/overworld.h
 	@ and checked by CheckForTrainersWantingBattle (src/trainer_see.c). Phase 1
