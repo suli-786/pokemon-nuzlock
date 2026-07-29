@@ -1080,6 +1080,24 @@ static void FieldTask_ReturnToPcMenu(void)
 #undef tNextOption
 #undef tWindowId
 
+// Overhaul: the live counterpart of pokemon_storage_system.c's
+// FieldTask_ReturnToPartyMenu. The callback itself is owned by that file (single
+// source of truth) and read here through the consume-once accessor.
+// Placed after the #undef block so the task-data macros are out of scope.
+static void FieldTask_ReturnToPartyMenu(void)
+{
+    MainCallback vblankCb = gMain.vblankCallback;
+    MainCallback returnCb = PokemonPC_TakeReturnToPartyCallback();
+
+    ResetSpriteData();
+    FreeAllWindowBuffers();
+
+    SetVBlankCallback(NULL);
+    SetMainCallback2(returnCb != NULL ? returnCb : CB2_ReturnToFieldWithOpenMenu);
+    SetVBlankCallback(vblankCb);
+    FadeInFromBlack();
+}
+
 static void CreateMainMenu(u8 whichMenu, s16 *windowIdPtr)
 {
     s16 windowId;
@@ -1096,7 +1114,10 @@ static void CreateMainMenu(u8 whichMenu, s16 *windowIdPtr)
 static void CB2_ExitPokeStorage(void)
 {
     sPreviousBoxOption = GetCurrentBoxOption();
-    gFieldCallback = FieldTask_ReturnToPcMenu;
+    // All three exits from the SwSh PC funnel through here (the two EnterPokeStorage
+    // alloc-failure paths and the normal exit), so this is the only branch needed.
+    gFieldCallback = PokemonPC_HasReturnToPartyCallback() ? FieldTask_ReturnToPartyMenu
+                                                         : FieldTask_ReturnToPcMenu;
     SetMainCallback2(CB2_ReturnToField);
 }
 

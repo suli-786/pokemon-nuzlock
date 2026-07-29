@@ -3526,7 +3526,7 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, u8 partyIndex, 
     bool32 friendshipOnly = FALSE;
     enum Item heldItem;
     u8 effectFlags;
-    s8 evChange;
+    s16 evChange; // s16 so the "MAX_TOTAL_EVS - evCount" clamp (up to 510) is representable
     u16 evCount;
     u8 levelBefore;
     bool8 didLevelUp = FALSE;
@@ -3672,7 +3672,8 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, u8 partyIndex, 
                         evCount = GetMonEVCount(mon);
                         temp2 = itemEffect[itemEffectParam];
                         dataSigned = GetMonData(mon, sGetMonDataEVConstants[temp1]);
-                        evChange = temp2;
+                        // (s8) is mandatory: temp2 is u32, so a bare widen turns EV-lowering berries (0xF6 = -10) into +246.
+                        evChange = (s8)itemEffect[itemEffectParam];
 
                         if (evChange > 0) // Increasing EV (HP or Atk)
                         {
@@ -3867,7 +3868,8 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, u8 partyIndex, 
                         evCount = GetMonEVCount(mon);
                         temp2 = itemEffect[itemEffectParam];
                         dataSigned = GetMonData(mon, sGetMonDataEVConstants[temp1 + 2]);
-                        evChange = temp2;
+                        // (s8) is mandatory: temp2 is u32, so a bare widen turns EV-lowering berries (0xF6 = -10) into +246.
+                        evChange = (s8)itemEffect[itemEffectParam];
                         if (evChange > 0) // Increasing EV
                         {
                             // Check if the total EV limit is reached
@@ -5981,6 +5983,10 @@ struct MonSpritesGfxManager *CreateMonSpritesGfxManager(u8 managerId, u8 mode)
 
     failureFlags = 0;
     managerId %= MON_SPR_GFX_MANAGERS_COUNT;
+    // Mont note: If the manager is already active, return it to allow for reliable transitions between summary screen
+    // and swsh party menu which also uses animated mon sprite
+    if (sMonSpritesGfxManagers[managerId] != NULL && sMonSpritesGfxManagers[managerId]->active == GFX_MANAGER_ACTIVE)
+        return sMonSpritesGfxManagers[managerId];
     gfx = AllocZeroed(sizeof(*gfx));
     if (gfx == NULL)
         return NULL;
@@ -6076,6 +6082,9 @@ void DestroyMonSpritesGfxManager(u8 managerId)
 
     managerId %= MON_SPR_GFX_MANAGERS_COUNT;
     gfx = sMonSpritesGfxManagers[managerId];
+    // Clear global reference to avoid leaving a dangling pointer that others (swsh summary screen)
+    // might read while the manager is being freed
+    sMonSpritesGfxManagers[managerId] = NULL;
     if (gfx == NULL)
         return;
 

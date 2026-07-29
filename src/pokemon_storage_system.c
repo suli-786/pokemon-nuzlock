@@ -559,6 +559,10 @@ EWRAM_DATA static u8 sMovingMonOrigBoxPos = 0;
 EWRAM_DATA static bool8 sAutoActionOn = 0;
 EWRAM_DATA static bool8 sJustOpenedBag = 0;
 EWRAM_DATA static bool8 sRefreshDisplayMonGfx = FALSE;
+// Overhaul: single owner for the "PC was opened from the party menu" state. Both
+// this file's box UI and src/swsh_storage_system.c's read it through the accessors
+// below, so there is exactly one source of truth. See UI_PORT_CHECKLIST.md §3.4.
+EWRAM_DATA static MainCallback sReturnToPartyCallback = NULL;
 
 // Main tasks
 static void Task_InitPokeStorage(u8);
@@ -1623,6 +1627,11 @@ static void Task_PCMainMenu(u8 taskId)
 
 void ShowPokemonStorageSystemPC(void)
 {
+    // Overhaul: the field PC always starts clean. Guards against a stale callback
+    // left behind by a party-menu PC session that exited by a route which bypasses
+    // CB2_ExitPokeStorage (e.g. OPTION_SELECT_MON's CB2_ReturnToFieldContinueScript).
+    PokemonPC_SetReturnToPartyCallback(NULL);
+
     if (SWSH_STORAGE_SYSTEM)
     {
         ShowPokemonStorageSystemPC_SwSh();
@@ -1649,6 +1658,57 @@ static void FieldTask_ReturnToPcMenu(void)
     FadeInFromBlack();
 }
 
+// Overhaul: dead while SWSH_STORAGE_SYSTEM == TRUE, kept so the vanilla box UI
+// stays honest if the toggle is ever flipped back off.
+static void FieldTask_ReturnToPartyMenu(void)
+{
+    MainCallback vblankCb = gMain.vblankCallback;
+    MainCallback returnCb = PokemonPC_TakeReturnToPartyCallback();
+
+    ResetSpriteData();
+    FreeAllWindowBuffers();
+
+    SetVBlankCallback(NULL);
+    SetMainCallback2(returnCb != NULL ? returnCb : CB2_ReturnToFieldWithOpenMenu);
+    SetVBlankCallback(vblankCb);
+    FadeInFromBlack();
+}
+
+void PokemonPC_SetReturnToPartyCallback(MainCallback cb)
+{
+    sReturnToPartyCallback = cb;
+}
+
+bool32 PokemonPC_HasReturnToPartyCallback(void)
+{
+    return sReturnToPartyCallback != NULL;
+}
+
+// Consume-once: reading the callback also clears it, so a session that never
+// reaches an exit handler cannot leak the pointer into the next PC visit.
+MainCallback PokemonPC_TakeReturnToPartyCallback(void)
+{
+    MainCallback cb = sReturnToPartyCallback;
+    sReturnToPartyCallback = NULL;
+    return cb;
+}
+
+void ShowPokemonPCFromParty(void)
+{
+    if (SWSH_STORAGE_SYSTEM)
+    {
+        ShowPokemonPCFromParty_SwSh();
+        return;
+    }
+
+    EnterPokeStorage(OPTION_MOVE_MONS);
+}
+
+void CB2_ShowPokemonPCFromParty(void)
+{
+    ShowPokemonPCFromParty();
+}
+
 #undef tState
 #undef tSelectedOption
 #undef tInput
@@ -1671,7 +1731,8 @@ static void CreateMainMenu(u8 whichMenu, s16 *windowIdPtr)
 static void CB2_ExitPokeStorage(void)
 {
     sPreviousBoxOption = GetCurrentBoxOption();
-    gFieldCallback = FieldTask_ReturnToPcMenu;
+    gFieldCallback = PokemonPC_HasReturnToPartyCallback() ? FieldTask_ReturnToPartyMenu
+                                                         : FieldTask_ReturnToPcMenu;
     SetMainCallback2(CB2_ReturnToField);
 }
 

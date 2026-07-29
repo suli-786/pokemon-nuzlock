@@ -73,10 +73,15 @@ untouched and still live.
 Backing API: `NuzlockeIsGraveyardBox`, `NuzlockeIsBoxMonDead`, `NuzlockeSetUpGraveyardBox` in
 `include/nuzlocke.h` / `src/nuzlocke.c`.
 
-### 2.2 Cap Candy + Endless Candy — `src/party_menu.c` (branch: **party**, secondary **bag**)
+### 2.2 Cap Candy + Endless Candy — `src/party_menu.c` (branch: **party**, secondary **bag**) — RESOLVED, see §3.4
+
+**Rows 6–11 no longer exist.** Cap Candy's hand-rolled callback was deleted before the party port
+landed (commit `1b520f9a66`) and the item is now pure data — an Exp Candy on a tier that always
+overshoots the level cap. Rows 12–13 survived the port and now live in `src/swsh_party_menu.c`.
+The table below is kept as the historical record of what the port had to account for.
 
 Cap Candy is a Phase 2a item that jumps a mon straight to `GetCurrentLevelCap()` in one action.
-It is implemented entirely inside `party_menu.c`, in the region a SwSh party-menu rewrite owns.
+It **was** implemented entirely inside `party_menu.c`, in the region a SwSh party-menu rewrite owns.
 
 | # | Site | Symbol | Note |
 |---|---|---|---|
@@ -272,7 +277,178 @@ the 5×3 grid is active and GRAVE is the last cell; the partial-row math handles
 
 `ShowPokemonPCFromParty_SwSh()` is exported from `include/swsh_storage_system.h` and implemented
 (`EnterPokeStorage(OPTION_MOVE_MONS)`), but **nothing calls it yet** — it is the hook the SwSh
-party-menu branch will need.
+party-menu branch will need. *(Superseded: §3.4 is what finally calls it.)*
+
+---
+
+### 3.4 `swsh_party_menu` — landed
+
+**Master toggle:** `SWSH_PARTY_MENU = TRUE` in `include/config/swsh_ui.h`, per §1. Tuning lives in
+the new `include/swsh_party_menu.h` (`SWSH_PARTY_MENU_PC_ACCESS`, `SWSH_PARTY_MON_IDLE_ANIMS`,
+`SWSH_PARTY_MON_IDLE_ANIMS_FRAMES`).
+
+The branch's `include/config/swsh_party_menu.h` was **not** taken — it holds the master switch and
+three tuning knobs together, which is exactly the §1 anti-pattern. It also reached consumers by an
+include chain (`constants/party_menu.h` → `config/swsh_party_menu.h`). Because we cut that chain,
+`src/swsh_party_menu.c` carries an explicit `#include "swsh_party_menu.h"` of its own. **Without
+it the four `#if SWSH_PARTY_MENU_PC_ACCESS` blocks evaluate to `0` and the entire PC-from-party
+feature vanishes with a green build** — the §1 failure class, live. `include/party_menu.h` includes
+the same header so `CB2_ReopenPartyMenuFromPC`'s guarded declaration matches its definition.
+
+**Shape of the port.** Unlike storage (§3.3), this one *does* `#if` the vanilla file out.
+`src/party_menu.c` is wrapped in `#if !SWSH_PARTY_MENU` — opened immediately after the include
+block, closed at EOF next to the `#endif // TESTING` — so `build/emerald/src/party_menu.o` is
+**0 text / 0 data / 0 bss**. Better than storage's dead-but-linked situation, but grep still finds
+~8600 lines that never run, so the file carries a header comment saying so. Post-link:
+IWRAM **86.57 %** (unchanged — the swap is RAM-neutral), EWRAM 89.06 % (+104 B), ROM 79.16 %.
+
+**Rows 6–11: deleted, not ported.** Cap Candy's callback chain was demolished in commit
+`1b520f9a66`, before this port, because it was broken independently of any UI work: it wrote EXP
+directly and never entered the engine's move-learn state machine. Root cause of the fix is that
+the expansion already does the job — with `B_EXP_CAP_TYPE == EXP_CAP_HARD` and `B_RARE_CANDY_CAP`,
+the Exp Candy branch of `PokemonUseItemEffects` clamps experience to `GetCurrentLevelCap()`. So
+`ITEM_CAP_CANDY` is now data: `.holdEffectParam = EXP_TO_CAP`, `.fieldUseFunc =
+ItemUseOutOfBattle_RareCandy`, `.effect = gItemEffect_RareCandy`. The new tier lives in three
+places that must stay in sync:
+
+| Site | What |
+|---|---|
+| `include/constants/items.h` | `#define EXP_TO_CAP 6` |
+| `src/pokemon.c` `sExpCandyExperienceTable` | `[EXP_TO_CAP - 1] = 2000000` |
+| `src/data/items.h` `[ITEM_CAP_CANDY]` | `.holdEffectParam = EXP_TO_CAP` |
+
+Miss the table entry and `param - 1 < ARRAY_COUNT(sExpCandyExperienceTable)` goes false,
+`dataUnsigned` stays 0, the `if (dataUnsigned != 0) // Failsafe` skips everything, and **Cap Candy
+does nothing at all, with no error**. 2,000,000 is chosen because it exceeds 1,640,000 (max L100
+experience on the slowest growth rate), so one application always overshoots and the hard-cap
+clamp pins it to exactly the cap on any curve.
+
+One defensive edit inside the ported file: `ItemUseCB_RareCandy`'s multi-use branch computed
+`u16 candyExp = sExpCandyExperienceTable[tHoldEffectParam - 1]`, which truncates 2,000,000 to
+33,920. Widened to `u32` (both `candyExp` and `candyCount`). Unreachable today — Cap Candy is
+`.importance = 1` so its quantity is always 1 — but a landmine for anyone who makes a big-tier
+candy stackable.
+
+**Rows 12–13: re-established.** The branch re-landed upstream's unconditional
+`RemoveBagItem(gSpecialVar_ItemId, ...)` on both candy paths. Guards restored:
+
+| Row | Live site | Function |
+|---|---|---|
+| 12 | `src/swsh_party_menu.c` L7512 | `ItemUseCB_RareCandy`, cannot-use/evolve path |
+| 13 | `src/swsh_party_menu.c` L10568 | `ItemUse_ApplyExpCandy` |
+
+Note the shape change: the SwSh menu splits the apply step into its own `ItemUse_ApplyExpCandy` and
+quantifies it (`tItemCount`, reached directly or via a new "how many" prompt), so row 13 is not the
+same function it used to be. All 29 `RemoveBagItem` sites in the file were walked; those two are
+the only ones on a candy path. **`ItemUse_ApplyEvReduceBerry` / `ItemUse_ApplyEvIncreaseItem` are
+deliberately left unguarded** — the vanilla file does not guard them either, and adding it would be
+a behaviour change smuggled in under a port.
+
+Free win from the branch: `PartyMenuTryEvolution` keys its re-entry chain on
+`GetItemFieldFunc(...) == ItemUseOutOfBattle_RareCandy && CheckBagHasItem(...)`. Endless Candy and
+Cap Candy both use that field func and are never consumed, so `CheckBagHasItem` stays TRUE and the
+"keep using it" loop survives evolution with no extra code — this is what old row 11 was for.
+
+**§3.1's "don't land it twice" rule fired for the first time.** The branch ships `src/comfy_anim.c`
++ `include/comfy_anim.h` — the **unhardened** upstream copy (pool of 8, `gComfyAnims[NUM_COMFY_ANIMS]`
+with no overflow slot). Both paths were dropped from the checkout. The API is identical
+(`CreateComfyAnim_Easing/_Spring`, `ReleaseComfyAnim`, `AdvanceComfyAnimations`), so
+`swsh_party_menu.c` compiles against ours unchanged. Taking the branch's copy would have silently
+reintroduced the out-of-bounds EWRAM write — and it would now hit *more* often, since the party
+menu is a **third** comfy-anim consumer alongside the summary screen and the map popup. §3.2's
+"harmless today, the two are never live at once" caveat about `HideMapNamePopUpWindow` releasing
+slot 0 is worth re-reading with that third consumer in mind.
+
+**PC-from-party plumbing.** The branch patches `src/pokemon_storage_system.c`, whose box UI is
+unreachable under `SWSH_STORAGE_SYSTEM` — a verbatim apply is a green build and a dead feature.
+Split instead:
+
+- **State owner:** `src/pokemon_storage_system.c`, next to the other `EWRAM_DATA`.
+  `EWRAM_DATA static MainCallback sReturnToPartyCallback` plus three accessors —
+  `PokemonPC_SetReturnToPartyCallback`, `PokemonPC_HasReturnToPartyCallback`, and the
+  consume-once `PokemonPC_TakeReturnToPartyCallback`. Same "shared globals stay in the vanilla
+  file" pattern §3.3 describes for `StorageGetCurrentBox` et al. Duplicating the static into both
+  forks would give two sources of truth that desync the moment one path writes and the other reads.
+  Cost: 4 B EWRAM.
+- **Live exit task:** `FieldTask_ReturnToPartyMenu` in `src/swsh_storage_system.c`, placed after the
+  `#undef tState/...` block so the task-data macros are out of scope, and `CB2_ExitPokeStorage`
+  there now picks between it and `FieldTask_ReturnToPcMenu`. All three exits from the SwSh PC
+  (normal exit + the two `EnterPokeStorage` alloc-failure paths) funnel through that one function,
+  so one branch covers every route out.
+- A dead-but-honest twin of both lives in `src/pokemon_storage_system.c` for the
+  `SWSH_STORAGE_SYSTEM = FALSE` case, same discipline §3.3 applied to the five gates.
+- `ShowPokemonPCFromParty` is the **sixth** `if (SWSH_STORAGE_SYSTEM) { ..._SwSh(); return; }`
+  early-return in `src/pokemon_storage_system.c` — §3.3's list of five is now a list of six. It is
+  what finally calls the `ShowPokemonPCFromParty_SwSh` hook that had been sitting there uncalled
+  since the storage port.
+
+**Hardening beyond the branch (stale-callback trap).** `swsh_party_menu.c` arms the callback
+*before* opening the PC. A session that exits by a route bypassing `CB2_ExitPokeStorage` — notably
+`OPTION_SELECT_MON`'s `CB2_ReturnToFieldContinueScript` — leaves the pointer live, and the next PC
+opened normally from the field would dump the player into a party menu on exit. Two mitigations,
+both applied: the accessor is consume-once (reading clears), and `ShowPokemonStorageSystemPC`
+NULLs it on entry so the field PC always starts clean.
+
+**`DisplayPartyMenuStdMessage` is now `UNUSED` and suppresses 13 prompt IDs**
+(`src/swsh_party_menu.c` L3495): nine are cleared outright (`CHOOSE_MON`, `CHOOSE_MON_2`,
+`MOVE_TO_WHERE`, `TEACH_WHICH_MON`, `USE_ON_WHICH_MON`, `GIVE_TO_WHICH_MON`, `RESTORE_WHICH_MOVE`,
+`BOOST_PP_WHICH_MOVE`, `CHOOSE_MON_FOR_BOX`) and four return silently (`DO_WHAT_WITH_MON`,
+`DO_WHAT_WITH_ITEM`, `DO_WHAT_WITH_MAIL`, `MOVE_ITEM_WHERE`). `src/fldeff_softboiled.c` calls it 4×
+and still links, but Softboiled's "Use on which Pokémon?" prompt no longer appears. Cosmetic, and
+invisible to every automated gate — playtest it.
+
+**Shared-file hunks hand-applied** (branch diff worked through selectively; never `git apply`):
+
+- `include/constants/party_menu.h` — took `PARTY_ACTION_MOVE_ITEM 16`, `PARTY_ACTION_FUSION 17`,
+  `PARTY_MSG_SEND_MON_TO_BOX 32`; dropped the branch's `#include "config/swsh_party_menu.h"`.
+  Safe because `struct PartyMenu.action` is a full `u8`, not a bitfield.
+- `include/party_menu.h` — `#include "swsh_party_menu.h"` (not the branch's `constants/party_menu.h`)
+  + the guarded `CB2_ReopenPartyMenuFromPC` decl.
+- `include/pokemon.h` — took the `GetFormChangeTargetSpecies` / `GetFormChangeTargetSpeciesBoxMon`
+  declarations (**required**: both are non-static in `src/pokemon.c` but were declared nowhere, and
+  `swsh_party_menu.c` calls the first), and the cosmetic `u8 usedByAI` → `bool8 usedByAI` which
+  removes a header/impl mismatch. Skipped the `PokemonSummaryDoMonAnimation` hunk — already ours
+  from §3.2.
+- `include/pokemon_storage_system.h` — `#include "main.h"` + the PC-from-party decls above.
+- `src/menu_specialized.c` — took the whole `DrawLevelUpWindowPg1` 3-digit-delta hunk. This is a
+  **bug fix we are inheriting** and it is load-bearing: Cap Candy jumps ~90 levels in one action
+  and produces stat deltas well over 99, which the old `ConvertIntToDecimalStringN(..., 2)`
+  truncated silently.
+- `src/pokemon.c` — took three hunks. (1) `CreateMonSpritesGfxManager` early-returns when the
+  manager is already `GFX_MANAGER_ACTIVE`, needed for party ↔ summary round trips now that both
+  animate a mon sprite. (2) `DestroyMonSpritesGfxManager` NULLs `sMonSpritesGfxManagers[managerId]`
+  *before* the free, so the SwSh summary screen cannot read a dangling global. (3) `evChange`
+  widened `s8` → `s16` so the `MAX_TOTAL_EVS - evCount` clamp (up to 510) is representable.
+  **The widening was rewritten, not taken.** The branch's version shadows — it declares a fresh
+  `s16 evChange` inside the first block while the second assigns the outer one — and more
+  importantly `evChange = temp2` with `temp2` a `u32` turns EV-lowering berries (`0xF6` = −10) into
+  **+246** once the variable is wide enough to hold it. Both sites are now
+  `evChange = (s8)itemEffect[itemEffectParam];`, cast mandatory. Dropped four pure-churn hunks
+  (backslash realignment, a `GetMonData(..., NULL)` re-add, three `ITEM5_FRIENDSHIP_*`
+  de-indentations that actually break the switch-case style) and skipped four `isShadow` hunks
+  already ours from §3.2.
+- `test/party_menu.c` — took the `KNOWN_FAILING` hunk on the first of the three tests (SwSh has no
+  Cancel or Confirm button, so that navigation assertion cannot hold). **This is the cheapest
+  automated detector for the whole include-order failure class**: if that test reports `PASS`
+  instead of `EXPECTED_FAIL`, `SWSH_PARTY_MENU` is not reaching `party_menu.c` and the vanilla menu
+  is still live. All three tests still link because `swsh_party_menu.c` carries its own `#if TESTING`
+  definition of `Test_UpdatePartySelectionSingleLayout`.
+- Skipped entirely, already ours: `include/pokemon_summary_screen.h`, `src/pokemon_summary_screen.c`.
+
+**Behaviour deltas accepted consciously** (not regressions, but player-visible):
+
+1. **Cap Candy now runs the full move-learn chain.** The deleted callback wrote EXP directly and
+   skipped per-level prompts; the stock path runs `Task_DisplayLevelUpStatsPg1` →
+   `Task_TryLearnNewMoves` → `PartyMenuTryEvolution`, so ~90 levels of move prompts arrive in one
+   action. That is the documented intent of the decision, and the most visible change in the port.
+2. Egg refusal preserved (`IsSelectedMonNotEgg`, the direct counterpart of vanilla's check).
+3. Message text changes to the exp-candy string ("gained N Exp. Points and elevated to Lv. X").
+   `ConvertIntToDecimalStringN(..., 7)` fits 2,000,000 exactly — watch for clipping.
+
+**Nuzlocke exposure: none.** Our `party_menu.c` delta was five hunks, all candy. The party-adjacent
+nuzlocke gates live in `src/pokemon.c` (`PokemonUseItemEffects` rules 7/9, `CopyMonToPC`), which
+this port does not touch. But the port opens a **new route into the PC**, so all five §3.3 gates
+are now reachable from the party menu as well as the field PC — re-verify them by that route.
 
 ---
 
@@ -280,12 +456,12 @@ party-menu branch will need.
 
 For **storage**: DONE, see §3.3.
 
-For **party**: rows 6–13. Rows 6–10 are self-contained functions that can be moved across
-verbatim; row 11 is a one-line `else if` and row 12–13 are two modified upstream lines — those
-three are the ones that get lost.
+For **party**: DONE, see §3.4. Rows 6–11 no longer exist (Cap Candy deleted); rows 12–13 live at
+`src/swsh_party_menu.c` L7512 / L10568.
 
-For **bag**: rows 12–13 indirectly (item consumability), plus `ItemUseOutOfBattle_CapCandy`
-dispatch in `src/item_use.c`.
+For **bag**: rows 12–13 indirectly (item consumability). `ItemUseOutOfBattle_CapCandy` is gone —
+Cap Candy now dispatches through `ItemUseOutOfBattle_RareCandy` like every other candy, so a bag
+rewrite only has to keep `GetItemConsumability` honest in the field-use path.
 
 For **all**: re-read §2.4. Anything touching `struct BoxPokemon` or `enum MonData` is a
 save-format change — run `make check TESTS="SaveBlock"` and expect 3/3.

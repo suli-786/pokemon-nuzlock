@@ -14,13 +14,13 @@
 
 #define SWSH_SUMMARY_SCREEN     TRUE    // Sword/Shield style Pokémon summary screen. Tuning: include/swsh_summary_screen.h
 #define SWSH_STORAGE_SYSTEM     TRUE    // Sword/Shield style PC box screen.         Tuning: include/swsh_storage_system.h
+#define SWSH_PARTY_MENU         TRUE    // Sword/Shield style party menu.            Tuning: include/swsh_party_menu.h
 
 // The map name pop-up has no toggle here on purpose: it is selected with
 // OW_POPUP_GENERATION == GEN_8 in include/config/overworld.h, which is already
 // an upstream config knob in the right place.
 
 // Reserved for the branches still to be ported:
-// #define SWSH_PARTY_MENU      FALSE   // Sword/Shield style party menu
 // #define SWSH_BAG_SCREEN      FALSE   // Sword/Shield style bag
 
 #endif // GUARD_CONFIG_SWSH_UI_H

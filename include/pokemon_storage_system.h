@@ -1,6 +1,8 @@
 #ifndef GUARD_POKEMON_STORAGE_SYSTEM_H
 #define GUARD_POKEMON_STORAGE_SYSTEM_H
 
+#include "main.h"
+
 #define TOTAL_BOXES_COUNT       14
 #define IN_BOX_ROWS             5 // Number of rows, 6 Pokémon per row
 #define IN_BOX_COLUMNS          6 // Number of columns, 5 Pokémon per column
@@ -36,6 +38,14 @@ u16 CountPartyAliveNonEggMons_IgnoreVar0x8004Slot(void);
 u8 CountPartyMons(void);
 u8 *StringCopyAndFillWithSpaces(u8 *dst, const u8 *src, u16 n);
 void ShowPokemonStorageSystemPC(void);
+void ShowPokemonPCFromParty(void);
+void CB2_ShowPokemonPCFromParty(void);
+// Overhaul: single owner for the "return to the party menu on PC exit" state.
+// Lives in src/pokemon_storage_system.c so both the vanilla and the SwSh box UI
+// read the same variable -- see docs/overhaul/UI_PORT_CHECKLIST.md §3.4.
+void PokemonPC_SetReturnToPartyCallback(MainCallback cb);
+bool32 PokemonPC_HasReturnToPartyCallback(void);
+MainCallback PokemonPC_TakeReturnToPartyCallback(void); // consume-once
 void ResetPokemonStorageSystem(void);
 s16 CompactPartySlots(void);
 u8 StorageGetCurrentBox(void);
