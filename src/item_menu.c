@@ -51,6 +51,12 @@
 #include "constants/rgb.h"
 #include "constants/songs.h"
 
+// NOTE (overhaul): under SWSH_ITEM_MENU this whole file is compiled out -- the
+// live bag screen is src/swsh_item_menu.c. Everything below still greps, but
+// none of it runs. Bag behaviour changes belong in the SwSh fork (or both).
+// See docs/overhaul/UI_PORT_CHECKLIST.md §3.5.
+#if !SWSH_ITEM_MENU
+
 #define TAG_POCKET_SCROLL_ARROW 110
 #define TAG_BAG_SCROLL_ARROW    111
 
@@ -3028,3 +3034,5 @@ static s32 CompareItemsByIndex(enum Pocket pocketId, struct ItemSlot item1, stru
 
     return 0; // Cannot have multiple stacks of indexed items
 }
+
+#endif // !SWSH_ITEM_MENU

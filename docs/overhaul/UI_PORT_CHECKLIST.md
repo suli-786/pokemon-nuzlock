@@ -452,6 +452,176 @@ are now reachable from the party menu as well as the field PC — re-verify them
 
 ---
 
+### 3.5 `dev_bag_menu` — landed
+
+**Which branch.** `swsh_bag_menu` and `dev_bag_menu` are the **only** diverging pair in this remote
+(every other `swsh_*` / `dev_*` pair points at the same commit). `dev_bag_menu` is strictly ahead:
+`git log refs/ports/swsh_bag_menu ^refs/ports/dev_bag_menu` is **empty**, the other direction has
+exactly one commit — `d6c5d66cbd` "parameterize icon sprite coordinates, fix party blend in TM/HM,
+remove leftover vanilla scroll pocket arrows". `dev_bag_menu` was taken; there is nothing in
+`swsh_bag_menu` that is not in it.
+
+**Master toggle:** `SWSH_ITEM_MENU = TRUE` in `include/config/swsh_ui.h`, per §1. Note the **name**:
+§1 had reserved the line as `SWSH_BAG_SCREEN`, but the ported code tests `SWSH_ITEM_MENU` in ~9000
+lines and four shared files, so the config keeps the branch's spelling rather than adding a rename
+layer — same call as `SWSH_STORAGE_SYSTEM` / `SWSH_PARTY_MENU`. Upstream's
+`include/swsh_item_menu.h` held the master switch *and* eleven tuning knobs together (the §1
+anti-pattern); the master moved out, the knobs stayed, and the header now `#include`s
+`config/swsh_ui.h` itself. `src/swsh_item_menu.c` carries an explicit `#include "swsh_item_menu.h"`
+as its second line — the §3.4 lesson, since the knobs do **not** ride the global config chain.
+
+**Shape of the port.** Like the party menu (§3.4) and unlike storage (§3.3), this branch `#if`s the
+vanilla files out — *two* of them:
+
+| File | Wrapper | Post-link |
+|---|---|---|
+| `src/item_menu.c` | `#if !SWSH_ITEM_MENU` | `build/emerald/src/item_menu.o` = 0 text / 0 data / 0 bss |
+| `src/battle_pyramid_bag.c` | `#if !SWSH_ITEM_MENU_PYRAMID` | `build/emerald/src/battle_pyramid_bag.o` = 0 / 0 / 0 |
+
+`src/swsh_item_menu.c` (9020 lines) replaces **both**: it re-exports `gPyramidBagMenu`,
+`gPyramidBagMenuState`, `CloseBattlePyramidBag`, `Task_CloseBattlePyramidBagMessage` and
+`DisplayItemMessageInBattlePyramid` at its tail (L8874+), aliasing the pyramid bag onto the same
+allocation as `gBagMenu`. Both dead files carry a header comment saying so. Post-link:
+EWRAM **89.07 %**, IWRAM **86.57 %** (unchanged), ROM **79.17 %** — a ~0.01 pp move on two of three,
+because two whole screens left the link at the same time as one bigger one arrived.
+
+---
+
+**THE CENTRAL DECISION: `SWSH_ITEM_MENU_IN_BAG_USE` is FALSE.**
+
+Upstream ships it `(SWSH_ITEM_MENU && TRUE)`. It is now `(SWSH_ITEM_MENU && FALSE)` in
+`include/swsh_item_menu.h`.
+
+*What it does when TRUE.* The bag stops handing items to the party menu and performs Use / Give
+itself, on a party panel drawn inside the bag screen. Concretely it intercepts at two points in
+`src/item_use.c` — `SetUpItemUseCallback` (field / bag use) and `ItemUseInBattle_ShowPartyMenu`
+(in-battle use) — and short-circuits to `BagMenu_OpenPartySelect` / `BagMenu_OpenPartySelectBattle`
+before `gBagMenu->newScreenCallback` is ever set.
+
+*Why we turned it off.* Every one of those short-circuits **bypasses `src/swsh_party_menu.c`**,
+which is where the two `GetItemConsumability` guards live (§3.4 rows 12–13, L7512 / L10568) that
+keep `ITEM_ENDLESS_CANDY` and `ITEM_CAP_CANDY` infinite-use. The in-bag path re-implements the whole
+rare-candy chain from scratch and calls `RemoveBagItem` unconditionally on both of its candy exits —
+`src/swsh_item_menu.c` **L7046** (evolution path) and **L7062** (apply path, `appliedCount`). Those
+are the exact in-bag analogues of rows 12–13, and they are unguarded. Landing the branch as shipped
+would have silently made both candies consumable again — the second time in this port suite that a
+SwSh branch broke the custom candies, by a different mechanism than the party menu did. The
+`grep -c GetItemConsumability src/swsh_party_menu.c` == 2 gate does **not** catch this: the guards
+are still there, they just stop being on the path.
+
+*What one flag collapses.* `IN_BAG_USE` is the parent of four other knobs, all of which go FALSE
+with it, so the whole semantic-conflict surface disappears at once:
+
+| Knob | What it gated |
+|---|---|
+| `SWSH_ITEM_MENU_IN_BAG_REUSE` | cursor stays in the party panel after a use/give, for repeat use |
+| `SWSH_ITEM_MENU_IN_BATTLE_USE` | in-battle item use resolved inside the bag, incl. 12v12 multi-battle partner-party targeting |
+| `SWSH_ITEM_MENU_PARTY_HP_BAR` | live HP bar + status icons in the in-bag party slots |
+| `SWSH_ITEM_MENU_PYRAMID_ACTION` | the same inline Use/Give inside the Battle Pyramid bag |
+
+It also drops four window IDs from `enum` in `include/item_menu.h` (`ITEMWIN_PP_MOVE_SELECT`,
+`ITEMWIN_LEVEL_UP_STATS`, `ITEMWIN_ROTOM_CATALOG`, `ITEMWIN_ZYGARDE_CUBE`), ~19 fields from
+`struct BagMenu`, and leaves three assets referenced only from dead code
+(`party_slots.bin`, `status_icons.png`, `prompt_swap.png`). They still get built — the `INCGFX`
+dependency scan is textual, not preprocessor-aware — but nothing incbins them, so they cost 0 ROM.
+
+*What survives, i.e. what we still get.* Everything visual: the scrolling background
+(`SWSH_ITEM_MENU_SCROLLING_BG`), the SwSh tileset / cursor / hover slots / scroll thumb, the four
+sort orders, TM/HM move-type + category icons and contest info (`SWSH_ITEM_MENU_CONTEST_INFO`), the
+`ITEMWIN_SELL_PRICE` window, the SwSh Battle Pyramid bag (`SWSH_ITEM_MENU_PYRAMID`) and the in-battle
+**battle pockets** (`SWSH_ITEM_MENU_BATTLE_POCKETS` — Medicine / Poké Balls / Battle Items / Berries
+instead of the field pockets). Item routing simply lands back where it did before this port: the SwSh
+party menu.
+
+*Hunks deliberately NOT taken because of the flag.* Both of the branch's battle-engine hunks are
+100 % inside `#if SWSH_ITEM_MENU_IN_BATTLE_USE`, so with the flag off they emit nothing:
+
+- `include/battle.h` — `#include "swsh_item_menu.h"` + `bool8 itemTargetPartner[MAX_BATTLERS_COUNT]`
+  in `struct BattleStruct`.
+- `src/battle_script_commands.c` — a new `ItemUseTargetsPartnerParty()` helper plus six
+  redirect blocks in `BS_ItemRestoreHP`, `BS_ItemCureStatus`, `BS_ItemIncreaseStat`,
+  `BS_ItemRestorePP`, so an item used on the *partner's* party in a 12v12 multi battle resolves
+  against `gParties[B_TRAINER_PARTNER]`.
+
+Taking them would have meant injecting `#include "swsh_item_menu.h"` into `include/battle.h` — a
+header the whole battle engine pulls — to emit zero code, into two files that both carry local
+overhaul deltas. They are recorded here instead. **Re-enabling `IN_BAG_USE` is a code change, not a
+flag flip:** it needs (1) `GetItemConsumability` guards at `src/swsh_item_menu.c` L7046 + L7062,
+(2) both hunks above re-applied from `refs/ports/dev_bag_menu` (base `ad0fd4d17f`), (3) a re-check
+that nuzlocke rules 7/9 in `src/pokemon.c` `PokemonUseItemEffects` still sit on the new path.
+
+---
+
+**No hunk had to be redirected out of a dead file — checked, and here is the proof.** Our only local
+delta in `src/item_menu.c` was upstream `42425ca6a2` ("Fix bag list truncation when tossing a whole
+stack in berry pocket", RHH #10423), which rewrote `MergeSort`'s `usedCapacity` scan to not stop at
+the first empty slot. That commit is **not** an ancestor of the branch base, so the fork could have
+missed it — but Montblanc landed the identical fix independently as branch commit `301ec5799d`, and
+`src/swsh_item_menu.c` L5148 already carries the fixed loop. Nothing to move.
+
+The **message box / window-frame port (§ commit `0699f01eaf`) did not touch `src/item_menu.c`** — it
+only patched `include/menu.h`, `src/menu.c`, `src/text.c`, `src/text_window.c`, `src/graphics.c`,
+none of which this port kills. So unlike the party/storage case there was no window-frame work to
+redirect. The SwSh frames still apply to the new bag: it draws its text through the shared
+`src/text.c` / `src/menu.c` plumbing.
+
+**Nuzlocke exposure: verified nil, by two paths.**
+
+1. **Dupes clause.** Our `GetBallThrowableState` → `BALL_THROW_UNABLE_NUZLOCKE_DUPE` gate lives in
+   `src/item_use.c`, which is **live**. The fork's `ItemMenu_UseInBattle` is byte-identical to the
+   vanilla one and dispatches to `ItemUseInBattle_BagMenu` → `CannotUseItemsInBattle` →
+   `GetBallThrowableState`. Gate intact, and now reachable through the battle-pockets bag too.
+2. **Revive / dead-mon rules 7 and 9** live in `src/pokemon.c` `PokemonUseItemEffects`, which this
+   port does not touch, and which is only reached from the party-menu path — the path
+   `IN_BAG_USE = FALSE` keeps us on.
+
+Registered key items (`ITEM_REPELLANT`, `ITEM_PORTA_HEAL`) also survive: the fork's
+`UseRegisteredKeyItemOnField` (L4083) does `CreateTask(GetItemFieldFunc(gSaveBlock1Ptr->registeredItem), 8)`,
+i.e. straight through the item's field func, exactly as vanilla did.
+
+**§3.1's "don't land it twice" rule fired for the second time.** The branch ships `src/comfy_anim.c`
++ `include/comfy_anim.h` again — still the unhardened upstream copy (`diff` vs ours: 10 lines in the
+header, 40 in the source). Both paths were kept out of the checkout; `git diff HEAD --
+src/comfy_anim.c include/comfy_anim.h` is empty. The bag is now the **fourth** comfy-anim consumer
+(cursor, scroll thumb, two pocket arrows = four live slots; a fifth, the party item icon, is inside
+the disabled `IN_BAG_USE` block), so §3.1's `NUM_COMFY_ANIMS` 8 → 16 widening is doing real work
+here.
+
+**Deliberately not ported.** `graphics/bag/swsh/berry_flavor_mark.png` — referenced nowhere in the
+branch (branch commit `3e1c653b20` switched berry flavours from sprites to text colours and left the
+PNG behind). Dropped, same call as §3.2's `latin_frlg_nums` fonts. The other 18 assets under
+`graphics/bag/swsh/` were taken. No `graphics_file_rules.mk` entry is needed — the branch uses
+`INCGFX` / `INCBIN` throughout, like storage.
+
+**Shared-file hunks hand-applied** (branch diff worked through selectively; never `git apply`):
+
+- `include/item_menu.h` — `#include "swsh_item_menu.h"`; the `ITEMWIN_*` additions; the
+  `enum BattlePocket` / `BAG_POCKET_IDS_COUNT` block; `POCKETS_COUNT` → `BAG_POCKET_IDS_COUNT` on the
+  four cursor/scroll/count arrays; `isPyramid`; the three-buffer `tilemapBuffer` split; the
+  `struct BagMenu` tail. Taken whole — our copy of this header was byte-identical to upstream.
+- `src/item_menu.c`, `src/battle_pyramid_bag.c` — the `#if !…` wrappers plus a header comment each.
+- `src/item_use.c` — both interception hunks, taken *with* their `#if SWSH_ITEM_MENU_IN_BAG_USE` /
+  `#if SWSH_ITEM_MENU_IN_BATTLE_USE` guards, so they are inert today. Kept (rather than dropped like
+  the battle-engine pair) because this is the file where the routing decision is made and the guard
+  reads correctly here: `item_use.c` already includes `item_menu.h`, which now includes
+  `swsh_item_menu.h`, so there is no include-order trap. With the flag off the emitted code is
+  semantically identical to before (`inPyramid` is just the old condition, inverted and named).
+- `include/battle.h`, `src/battle_script_commands.c` — **skipped**, see above.
+
+**Behaviour deltas accepted consciously** (player-visible, no automated gate sees any of them):
+
+1. **In battle the bag shows four battle pockets, not the field pockets** — Medicine / Poké Balls /
+   Battle Items / Berries, assembled into `gBagMenu->battlePocketRefs`. A key item you could
+   previously scroll to mid-battle is not in that list.
+2. **The Battle Pyramid bag is now the SwSh bag** with a 10-slot scratch pocket
+   (`gBagMenu->pyramidScratch`), sharing `gBagMenu`'s allocation.
+3. **Use / Give still leaves the bag and opens the party menu**, i.e. exactly the pre-port flow. On
+   an unmodified `dev_bag_menu` it would not — this is the deliberate deviation, not a bug.
+4. Berry stat / berry tag pages stay off (`SWSH_ITEM_MENU_BERRY_STAT = FALSE`), upstream's own
+   default.
+
+---
+
 ## 4. Pending branches — pre-merge drill
 
 For **storage**: DONE, see §3.3.
@@ -459,9 +629,12 @@ For **storage**: DONE, see §3.3.
 For **party**: DONE, see §3.4. Rows 6–11 no longer exist (Cap Candy deleted); rows 12–13 live at
 `src/swsh_party_menu.c` L7512 / L10568.
 
-For **bag**: rows 12–13 indirectly (item consumability). `ItemUseOutOfBattle_CapCandy` is gone —
-Cap Candy now dispatches through `ItemUseOutOfBattle_RareCandy` like every other candy, so a bag
-rewrite only has to keep `GetItemConsumability` honest in the field-use path.
+For **bag**: DONE, see §3.5. Rows 12–13 are protected by *routing*, not by a new guard —
+`SWSH_ITEM_MENU_IN_BAG_USE = FALSE` keeps item use on the party-menu path where the guards already
+are. The unguarded in-bag copies at `src/swsh_item_menu.c` L7046 / L7062 are dead code today and are
+the first thing to fix if that flag is ever flipped back on.
+
+**All five SwSh branches are now landed.** There is no pending SwSh UI port.
 
 For **all**: re-read §2.4. Anything touching `struct BoxPokemon` or `enum MonData` is a
 save-format change — run `make check TESTS="SaveBlock"` and expect 3/3.

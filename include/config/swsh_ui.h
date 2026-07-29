@@ -16,12 +16,15 @@
 #define SWSH_STORAGE_SYSTEM     TRUE    // Sword/Shield style PC box screen.         Tuning: include/swsh_storage_system.h
 #define SWSH_PARTY_MENU         TRUE    // Sword/Shield style party menu.            Tuning: include/swsh_party_menu.h
 #define SWSH_MESSAGE_BOX        TRUE    // Sword/Shield style message box + name box. Tuning: include/menu.h, include/config/name_box.h
+#define SWSH_ITEM_MENU          TRUE    // Sword/Shield style bag screen.            Tuning: include/swsh_item_menu.h
 
 // The map name pop-up has no toggle here on purpose: it is selected with
 // OW_POPUP_GENERATION == GEN_8 in include/config/overworld.h, which is already
 // an upstream config knob in the right place.
 
-// Reserved for the branches still to be ported:
-// #define SWSH_BAG_SCREEN      FALSE   // Sword/Shield style bag
+// All five SwSh UI branches are ported; nothing is reserved here any more.
+// (The bag toggle is spelled SWSH_ITEM_MENU, not the SWSH_BAG_SCREEN this
+// comment used to reserve, so it matches the ~9000 lines of ported code that
+// test it -- same reasoning as SWSH_STORAGE_SYSTEM / SWSH_PARTY_MENU.)
 
 #endif // GUARD_CONFIG_SWSH_UI_H
