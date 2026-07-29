@@ -4,6 +4,12 @@
 #include "main.h"
 #include "config/summary_screen.h"
 #include "constants/move_relearner.h"
+// Overhaul: pulled in explicitly rather than relying on each consumer to include
+// swsh_summary_screen.h *before* this header (upstream's approach -- if the order
+// slipped, `#if SWSH_SUMMARY_SCREEN` quietly became `#if 0`). The master toggle
+// itself is in include/config/swsh_ui.h, which constants/global.h already pulls in;
+// this include is what makes the SWSH_SUMMARY_* tuning defines visible here too.
+#include "swsh_summary_screen.h"
 
 extern u8 gLastViewedMonIndex;
 
@@ -40,6 +46,12 @@ enum PokemonSummaryScreenPage
     PSS_PAGE_SKILLS,
     PSS_PAGE_BATTLE_MOVES,
     PSS_PAGE_CONTEST_MOVES,
+#if SWSH_SUMMARY_SCREEN
+#if SWSH_SUMMARY_SHOW_CONTEST_PAGES
+    PSS_PAGE_CONDITIONS,
+#endif
+    PSS_PAGE_MEMO,
+#endif
     PSS_PAGE_COUNT,
 };
 
@@ -54,6 +66,9 @@ void ShowPokemonSummaryScreen(u8 mode, void *mons, u8 monIndex, u8 maxMonIndex, 
 void ShowSelectMovePokemonSummaryScreen(struct Pokemon *mons, u8 monIndex, void (*callback)(void), u16 newMove);
 u8 GetMoveSlotToReplace(void);
 void SummaryScreen_SetAnimDelayTaskId(u8 taskId);
+void StopShadowAnimDelayTask(void);
+// Overhaul: exported so the SwSh summary screen can honour P_SUMMARY_SCREEN_IV_HYPERTRAIN.
+u32 GetAdjustedIvData(struct Pokemon *mon, u32 stat);
 bool32 CheckRelearnerStateFlag(enum MoveRelearnerStates state);
 
 #endif // GUARD_POKEMON_SUMMARY_SCREEN_H

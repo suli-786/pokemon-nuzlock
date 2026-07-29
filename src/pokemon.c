@@ -5699,12 +5699,15 @@ static void Task_AnimateAfterDelay(u8 taskId)
     }
 }
 
+#define tIsShadow data[4]
+
 static void Task_PokemonSummaryAnimateAfterDelay(u8 taskId)
 {
     if (--gTasks[taskId].sAnimDelay == 0)
     {
         StartMonSummaryAnimation(READ_PTR_FROM_TASK(taskId, 0), gTasks[taskId].sAnimId);
-        SummaryScreen_SetAnimDelayTaskId(TASK_NONE);
+        if (!gTasks[taskId].tIsShadow)
+            SummaryScreen_SetAnimDelayTaskId(TASK_NONE);
         DestroyTask(taskId);
     }
 }
@@ -5764,7 +5767,7 @@ void DoMonFrontSpriteAnimation(struct Sprite *sprite, enum Species species, bool
     }
 }
 
-void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, bool8 oneFrame)
+void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, bool8 oneFrame, bool32 isShadow)
 {
     if (!oneFrame && HasTwoFramesAnimation(species))
         StartSpriteAnim(sprite, 1);
@@ -5775,7 +5778,11 @@ void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, b
         STORE_PTR_IN_TASK(sprite, taskId, 0);
         gTasks[taskId].sAnimId = gSpeciesInfo[species].frontAnimId;
         gTasks[taskId].sAnimDelay = gSpeciesInfo[species].frontAnimDelay;
-        SummaryScreen_SetAnimDelayTaskId(taskId);
+        gTasks[taskId].tIsShadow = isShadow;
+
+        if (!isShadow)
+            SummaryScreen_SetAnimDelayTaskId(taskId);
+
         SetSpriteCB_MonAnimDummy(sprite);
     }
     else
@@ -5787,9 +5794,24 @@ void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, b
 
 void StopPokemonAnimationDelayTask(void)
 {
-    u8 delayTaskId = FindTaskIdByFunc(Task_PokemonSummaryAnimateAfterDelay);
-    if (delayTaskId != TASK_NONE)
+    u8 delayTaskId;
+    while ((delayTaskId = FindTaskIdByFunc(Task_PokemonSummaryAnimateAfterDelay)) != TASK_NONE)
         DestroyTask(delayTaskId);
+}
+
+void StopShadowAnimDelayTask(void)
+{
+    u8 taskId;
+    for (taskId = 0; taskId < NUM_TASKS; taskId++)
+    {
+        if (gTasks[taskId].isActive
+            && gTasks[taskId].func == Task_PokemonSummaryAnimateAfterDelay
+            && gTasks[taskId].tIsShadow)
+        {
+            DestroyTask(taskId);
+            return;
+        }
+    }
 }
 
 void BattleAnimateBackSprite(struct Sprite *sprite, enum Species species)

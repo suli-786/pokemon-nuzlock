@@ -5,6 +5,13 @@
 #define P_SUMMARY_SCREEN_NATURE_COLORS   TRUE   // If TRUE, nature-based stat boosts and reductions will be red and blue in the summary screen.
 #define P_SUMMARY_SCREEN_RENAME          TRUE   // If TRUE, an option to change Pokémon nicknames replaces the cancel prompt on the summary screen info page.
 
+// Overhaul: with SWSH_SUMMARY_SCREEN on (include/config/swsh_ui.h) the SwSh screen
+// replaces the vanilla one and re-expresses most of this file as its own
+// SWSH_SUMMARY_* defines. It honours P_SUMMARY_SCREEN_RENAME,
+// P_SUMMARY_SCREEN_MOVE_RELEARNER, P_SHOW_DYNAMIC_TYPES, P_SUMMARY_SCREEN_IV_EV_INFO
+// and P_SUMMARY_SCREEN_IV_HYPERTRAIN; the rest below are inert while it is active.
+// Full breakdown: docs/overhaul/UI_PORT_CHECKLIST.md §2.3 / §3.2.
+
 // IV/EV settings
 #define P_SUMMARY_SCREEN_IV_EV_INFO      TRUE   // If TRUE, will allow player to cycle through the Stats, IVs, and EVs in the summary screen skills page.
 #define P_SUMMARY_SCREEN_IV_EV_BOX_ONLY  FALSE  // If TRUE, will allow player to cycle through the Stats, IVs, and EVs in the summary screen skills page, but only in the PC storage box.

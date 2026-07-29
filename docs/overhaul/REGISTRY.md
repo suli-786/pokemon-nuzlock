@@ -79,7 +79,10 @@ Every ported branch/asset/tutorial gets a row when its code lands (CREDITS.md ge
 | TheXaman | tracker storage scheme, registered-items menu, options-plus | pending |
 | iriv24 | registered-items expansion update | pending |
 | fisham33 | select-mons (pick-4), battle-mode toggle | pending |
-| Montblanc (montmoguri) | SwSh UI suite | pending |
+| Montblanc (montmoguri) | SwSh UI suite | partially landed — see the two rows below; storage / party / bag branches still pending |
+| Montblanc (montmoguri), branch `swsh_map_popups` | SwSh map name pop-up: `graphics/map_popup/swsh.png`, the `GEN_8` paths in `src/map_name_popup.c` + `src/menu.c` | **landed** (Phase 4 UI port). `OW_POPUP_GENERATION = GEN_8`. |
+| Montblanc (montmoguri), branch `swsh_summary_screen` | SwSh summary screen: `src/swsh_summary_screen.c`, `include/swsh_summary_screen.h`, 30 assets under `graphics/summary_screen/swsh/`, plus the shim hunks in `pokemon.c`/`pokemon.h`/`pokemon_summary_screen.c`/`.h` | **landed** (Phase 4 UI port). Master toggle relocated to `include/config/swsh_ui.h`; IV/EV reads routed through `GetAdjustedIvData` for hyper-training. |
+| pret / pokefirered (via Montblanc) | `src/comfy_anim.c` + `include/comfy_anim.h` — the easing/spring animation module. Originates in **pret/pokefirered**; both Montblanc branches ship a byte-identical copy, landed once here. | **landed** (Phase 4 UI port), with our hardening — see docs/overhaul/UI_PORT_CHECKLIST.md §3.1 |
 | pollythadon (+ EternalCode, PlatinumMaster, NicoSwag, mudskipper13) | BW battle UI (if adopted) | pending |
 | miriamlefae | Unbound-style start menu (if adopted) | pending |
 | ravepossum | BW summary / HGSS battle UI (if adopted) | pending |
