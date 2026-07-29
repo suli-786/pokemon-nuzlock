@@ -53,7 +53,11 @@ static const u16 sTextWindowFrame20_Pal[] = INCGFX_U16("graphics/text_window/20.
 
 static const u16 sTextWindowPalettes[][16] =
 {
+#if SWSH_MESSAGE_BOX
+    INCGFX_U16("graphics/text_window/swsh/message_box.png", ".gbapal"),
+#else
     INCGFX_U16("graphics/text_window/message_box.png", ".gbapal"),
+#endif
     INCGFX_U16("graphics/text_window/text_pal1.pal", ".gbapal"),
     INCGFX_U16("graphics/text_window/text_pal2.pal", ".gbapal"),
     INCGFX_U16("graphics/text_window/text_pal3.pal", ".gbapal"),
@@ -98,7 +102,9 @@ const struct TilesPal *GetWindowFrameTilesPal(u8 id)
 
 void LoadMessageBoxGfx(u8 windowId, u16 destOffset, u8 palOffset)
 {
-    LoadBgTiles(GetWindowAttribute(windowId, WINDOW_BG), gMessageBox_Gfx, 0x1C0, destOffset);
+    // MSG_BOX_TILE_COUNT tiles, not a literal: SWSH_MESSAGE_BOX grows the frame from
+    // 14 to 25 tiles, so every destOffset in the tree needs that much headroom.
+    LoadBgTiles(GetWindowAttribute(windowId, WINDOW_BG), gMessageBox_Gfx, TILE_OFFSET_4BPP(MSG_BOX_TILE_COUNT), destOffset);
     LoadPalette(GetOverworldTextboxPalettePtr(), palOffset, PLTT_SIZE_4BPP);
 }
 

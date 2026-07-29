@@ -1,6 +1,7 @@
 #ifndef GUARD_MENU_H
 #define GUARD_MENU_H
 
+#include "config/swsh_ui.h"
 #include "task.h"
 #include "text.h"
 #include "window.h"
@@ -9,7 +10,27 @@
 #define DLG_WINDOW_BASE_TILE_NUM 0x200
 #define STD_WINDOW_PALETTE_NUM 14
 #define STD_WINDOW_PALETTE_SIZE PLTT_SIZEOF(10)
+
+// How many BG tiles LoadMessageBoxGfx() writes at its destOffset, and how wide the
+// standard "2 tiles in from the left, 4 tiles tall" message window may be.
+//
+// The SwSh frame (graphics/text_window/swsh/message_box.png, 5x5 tiles) is a 7x6
+// tilemap: 3 tiles of border on each side instead of vanilla's 2, so the window has
+// to give a column back or the right edge lands on column 30 and falls off-screen.
+// STD_WINDOW_BASE_TILE_NUM must clear the message box, which now runs
+// DLG_WINDOW_BASE_TILE_NUM .. +24 instead of .. +13.
+//
+// !! Every LoadMessageBoxGfx() destOffset in the tree has to have MSG_BOX_TILE_COUNT
+// !! tiles of headroom. See docs/overhaul/UI_PORT_CHECKLIST.md §3.5 for the audit.
+#if SWSH_MESSAGE_BOX
+#define MSG_BOX_TILE_COUNT       25
+#define MSG_BOX_WINDOW_WIDTH     26
+#define STD_WINDOW_BASE_TILE_NUM 0x21A
+#else
+#define MSG_BOX_TILE_COUNT       14
+#define MSG_BOX_WINDOW_WIDTH     27
 #define STD_WINDOW_BASE_TILE_NUM 0x214
+#endif
 
 #define MENU_NOTHING_CHOSEN -2
 #define MENU_B_PRESSED -1

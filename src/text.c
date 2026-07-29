@@ -66,8 +66,13 @@ EWRAM_DATA bool8 gDisableTextPrinters = 0;
 EWRAM_DATA TextFlags gTextFlags = {0};
 IWRAM_DATA struct TextGlyph gCurGlyph = {0};
 
+#if SWSH_MESSAGE_BOX
+static const u8 sDownArrowTiles[] = INCGFX_U8("graphics/text_window/swsh/down_arrow.png", ".4bpp");
+static const u8 sDarkDownArrowTiles[] = INCGFX_U8("graphics/text_window/swsh/down_arrow_alt.png", ".4bpp");
+#else
 static const u8 sDownArrowTiles[] = INCGFX_U8("graphics/fonts/down_arrow.png", ".4bpp");
 static const u8 sDarkDownArrowTiles[] = INCGFX_U8("graphics/fonts/down_arrow_alt.png", ".4bpp");
+#endif
 static const u8 sUnusedFRLGBlankedDownArrow[] = INCGFX_U8("graphics/fonts/unused_frlg_blanked_down_arrow.png", ".4bpp");
 static const u8 sUnusedFRLGDownArrow[] = INCGFX_U8("graphics/fonts/unused_frlg_down_arrow.png", ".4bpp");
 static const u8 sDownArrowYCoords[] = { 0, 1, 2, 1 };
@@ -1172,6 +1177,29 @@ void TextPrinterInitDownArrowCounters(struct TextPrinter *textPrinter)
     }
 }
 
+// SWSH_MESSAGE_BOX parks the "press A for more" arrow in the window's bottom-right
+// corner instead of trailing the text cursor, because the SwSh frame draws its own
+// pointer notch there. Clamped so a window shorter than 16 px cannot blit above its
+// own pixel buffer (upstream's version subtracts unconditionally).
+static inline u16 DownArrowX(struct TextPrinter *textPrinter)
+{
+#if SWSH_MESSAGE_BOX
+    return (gWindows[textPrinter->printerTemplate.windowId].window.width * 8) - 8;
+#else
+    return textPrinter->printerTemplate.currentX;
+#endif
+}
+
+static inline u16 DownArrowY(struct TextPrinter *textPrinter)
+{
+#if SWSH_MESSAGE_BOX
+    u32 heightPx = gWindows[textPrinter->printerTemplate.windowId].window.height * 8;
+    return (heightPx >= 16) ? heightPx - 16 : 0;
+#else
+    return textPrinter->printerTemplate.currentY;
+#endif
+}
+
 void TextPrinterDrawDownArrow(struct TextPrinter *textPrinter)
 {
     const u8 *arrowTiles;
@@ -1187,8 +1215,8 @@ void TextPrinterDrawDownArrow(struct TextPrinter *textPrinter)
             FillWindowPixelRect(
                 textPrinter->printerTemplate.windowId,
                 textPrinter->printerTemplate.color.background << 4 | textPrinter->printerTemplate.color.background,
-                textPrinter->printerTemplate.currentX,
-                textPrinter->printerTemplate.currentY,
+                DownArrowX(textPrinter),
+                DownArrowY(textPrinter),
                 8,
                 16);
 
@@ -1210,8 +1238,8 @@ void TextPrinterDrawDownArrow(struct TextPrinter *textPrinter)
                 sDownArrowYCoords[textPrinter->downArrowYPosIdx],
                 8,
                 16,
-                textPrinter->printerTemplate.currentX,
-                textPrinter->printerTemplate.currentY,
+                DownArrowX(textPrinter),
+                DownArrowY(textPrinter),
                 8,
                 16);
             CopyWindowToVram(textPrinter->printerTemplate.windowId, COPYWIN_GFX);
@@ -1227,8 +1255,8 @@ void TextPrinterClearDownArrow(struct TextPrinter *textPrinter)
     FillWindowPixelRect(
         textPrinter->printerTemplate.windowId,
         textPrinter->printerTemplate.color.background << 4 | textPrinter->printerTemplate.color.background,
-        textPrinter->printerTemplate.currentX,
-        textPrinter->printerTemplate.currentY,
+        DownArrowX(textPrinter),
+        DownArrowY(textPrinter),
         8,
         16);
     CopyWindowToVram(textPrinter->printerTemplate.windowId, COPYWIN_GFX);
