@@ -348,6 +348,16 @@ Overhaul_EventScript_NewGamePreset::
 	setvar VAR_SEAFLOOR_CAVERN_STATE, 1
 	setvar VAR_ROUTE128_STATE, 2
 	setvar VAR_SKY_PILLAR_STATE, 3
+
+	@ --- No line-of-sight trainer battles ---
+	@ OW_FLAG_NO_TRAINER_SEE is wired to this flag in include/config/overworld.h
+	@ and checked by CheckForTrainersWantingBattle (src/trainer_see.c). Phase 1
+	@ assigned the flag but never set it anywhere, so trainers kept charging the
+	@ player. Trainers still battle when talked to, and script-driven fights
+	@ (rivals, gym leaders, Wally) are unaffected -- those never go through the
+	@ sight check. Runtime-toggleable via the debug menu, and by the options
+	@ menu once that is built.
+	setflag FLAG_OVERHAUL_NO_TRAINER_SEE
 	return
 
 EventScript_ResetAllMapFlagsFrlg::

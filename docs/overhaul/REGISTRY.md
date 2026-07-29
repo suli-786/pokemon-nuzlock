@@ -9,7 +9,7 @@ Pool: 375+ `FLAG_UNUSED_0x*` ids in `include/constants/flags.h` (+ `DAILY_FLAGS`
 | Flag (new name) | Replaces | Module | Purpose |
 |---|---|---|---|
 | `FLAG_OVERHAUL_NO_WILD_ENCOUNTERS` | `FLAG_UNUSED_0x264` | encounters | assigned to `WE_FLAG_NO_ENCOUNTER` (Phase 1); toggled by the Repellant key item (Phase 2a) |
-| `FLAG_OVERHAUL_NO_TRAINER_SEE` | `FLAG_UNUSED_0x265` | encounters | assigned to `OW_FLAG_NO_TRAINER_SEE` (Phase 1) |
+| `FLAG_OVERHAUL_NO_TRAINER_SEE` | `FLAG_UNUSED_0x265` | encounters | assigned to `OW_FLAG_NO_TRAINER_SEE` (Phase 1); **set by `Overhaul_EventScript_NewGamePreset`** (2026-07-29 — Phase 1 assigned it but gave it no driver, so trainers still charged on sight) |
 | `FLAG_OVERHAUL_QUARTERMASTER_KIT` | `FLAG_UNUSED_0x266` | economy NPCs | Oldale Quartermaster one-time gift of the 4-item kit (Cap Candy, Endless Candy, Porta Heal, Repellant) — Phase 2a |
 | — Route 103 Old Rod NPC (no new flag) | reuses `FLAG_RECEIVED_OLD_ROD` | economy NPCs | shares Dewford's vanilla flag so double rods are impossible (Phase 2a) |
 | — randomizer feature flags (0x020..0x026, referenced not renamed) | `FLAG_UNUSED_0x020`–`0x026` | randomizer | `RANDOMIZER_FLAG_{WILD_MON,FIELD_ITEMS,TRAINER_MON,FIXED_MON,STARTER_AND_GIFT_MON,EGG_MON,ABILITIES}` via `include/config/randomizer.h`; inert while `RANDOMIZER_AVAILABLE` is FALSE |
