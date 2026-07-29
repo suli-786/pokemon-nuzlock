@@ -12,6 +12,7 @@
 #include "palette.h"
 #include "pokedex.h"
 #include "pokedex_area_screen.h"
+#include "randomizer.h"
 #include "regions.h"
 #include "region_map.h"
 #include "roamer.h"
@@ -121,8 +122,8 @@ static void BuildAreaGlowTilemap(void);
 static void SetAreaHasMon(u16, u16);
 static void SetSpecialMapHasMon(u16, u16);
 static mapsec_u16_t GetRegionMapSectionId(u8, u8);
-static bool8 MapHasSpecies(const struct WildEncounterTypes *, u32, enum Species);
-static bool8 MonListHasSpecies(const struct WildPokemonInfo *, enum Species, u16);
+static bool8 MapHasSpecies(const struct WildEncounterTypes *, u32, enum Species, u8, u8);
+static bool8 MonListHasSpecies(const struct WildEncounterTypes *, enum Species, enum WildPokemonArea, u8, u8);
 static void DoAreaGlow(void);
 static void Task_ShowPokedexAreaScreen(u8 taskId);
 static void Task_UpdatePokedexAreaScreen(u8 taskId);
@@ -340,7 +341,8 @@ static void FindMapsWithMon(enum Species species)
         if (GetRegionMapType(headerSectionId) != currentRegionMapType)
             continue;
 
-        if (MapHasSpecies(&gWildMonHeaders[i].encounterTypes[gAreaTimeOfDay], headerSectionId, species))
+        if (MapHasSpecies(&gWildMonHeaders[i].encounterTypes[gAreaTimeOfDay], headerSectionId, species,
+                          gWildMonHeaders[i].mapNum, gWildMonHeaders[i].mapGroup))
         {
             switch (gWildMonHeaders[i].mapGroup)
             {
@@ -429,7 +431,7 @@ static mapsec_u16_t GetRegionMapSectionId(u8 mapGroup, u8 mapNum)
     return Overworld_GetMapHeaderByGroupAndId(mapGroup, mapNum)->regionMapSectionId;
 }
 
-static bool8 MapHasSpecies(const struct WildEncounterTypes *info, u32 headerSectionId, enum Species species)
+static bool8 MapHasSpecies(const struct WildEncounterTypes *info, u32 headerSectionId, enum Species species, u8 mapNum, u8 mapGroup)
 {
     // If this is a header for Altering Cave, skip it if it's not the current Altering Cave encounter set
     if (headerSectionId == MAPSEC_ALTERING_CAVE)
@@ -439,31 +441,54 @@ static bool8 MapHasSpecies(const struct WildEncounterTypes *info, u32 headerSect
             return FALSE;
     }
 
-    if (MonListHasSpecies(info->landMonsInfo, species, LAND_WILD_COUNT))
+    if (MonListHasSpecies(info, species, WILD_AREA_LAND, mapNum, mapGroup))
         return TRUE;
-    if (MonListHasSpecies(info->waterMonsInfo, species, WATER_WILD_COUNT))
+    if (MonListHasSpecies(info, species, WILD_AREA_WATER, mapNum, mapGroup))
         return TRUE;
-// When searching the fishing encounters, this incorrectly uses the size of the land encounters.
-// As a result it's reading out of bounds of the fishing encounters tables.
-#ifdef BUGFIX
-    if (MonListHasSpecies(info->fishingMonsInfo, species, FISH_WILD_COUNT))
-#else
-    if (MonListHasSpecies(info->fishingMonsInfo, species, LAND_WILD_COUNT))
-#endif
+    if (MonListHasSpecies(info, species, WILD_AREA_FISHING, mapNum, mapGroup))
         return TRUE;
-    if (MonListHasSpecies(info->rockSmashMonsInfo, species, ROCK_WILD_COUNT))
+    if (MonListHasSpecies(info, species, WILD_AREA_ROCKS, mapNum, mapGroup))
         return TRUE;
     return FALSE;
 }
 
-static bool8 MonListHasSpecies(const struct WildPokemonInfo *info, enum Species species, u16 size)
+static bool8 MonListHasSpecies(const struct WildEncounterTypes *header, enum Species species, enum WildPokemonArea area, u8 mapNum, u8 mapGroup)
 {
-    u16 i;
+    u16 i, size;
+    const struct WildPokemonInfo *info;
+
+    switch (area)
+    {
+        case WILD_AREA_WATER:
+            info = header->waterMonsInfo;
+            size = WATER_WILD_COUNT;
+            break;
+        case WILD_AREA_ROCKS:
+            info = header->rockSmashMonsInfo;
+            size = ROCK_WILD_COUNT;
+            break;
+        case WILD_AREA_FISHING:
+            info = header->fishingMonsInfo;
+            size = FISH_WILD_COUNT;
+            break;
+        case WILD_AREA_LAND:
+        default:
+            info = header->landMonsInfo;
+            size = LAND_WILD_COUNT;
+            break;
+    }
+
     if (info != NULL)
     {
         for (i = 0; i < size; i++)
         {
-            if (info->wildPokemon[i].species == species)
+            u16 curSpecies = info->wildPokemon[i].species;
+            #if RANDOMIZER_AVAILABLE == TRUE
+                if (!IsRandomizationPossible(curSpecies, species))
+                    continue;
+                curSpecies = RandomizeWildEncounter(curSpecies, mapNum, mapGroup, area, i);
+            #endif
+            if (curSpecies == species)
                 return TRUE;
         }
     }

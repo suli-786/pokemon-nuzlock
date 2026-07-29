@@ -74,6 +74,7 @@
 #include "vs_seeker.h"
 #include "load_save.h"
 #include "battle_partner.h"
+#include "randomizer.h"
 
 enum FollowerNPCCreateDebugMenu
 {
@@ -332,6 +333,17 @@ static void DebugAction_FlagsVars_BagUseOnOff(u8 taskId);
 static void DebugAction_FlagsVars_CatchingOnOff(u8 taskId);
 static void DebugAction_FlagsVars_RunningShoes(u8 taskId);
 
+#if RANDOMIZER_AVAILABLE == TRUE
+static void DebugAction_Randomizer_ToggleWildMon(u8 taskId);
+static void DebugAction_Randomizer_ToggleTrainerMon(u8 taskId);
+static void DebugAction_Randomizer_ToggleFieldItems(u8 taskId);
+static void DebugAction_Randomizer_ToggleFixedMon(u8 taskId);
+static void DebugAction_Randomizer_ToggleStarterAndGiftMon(u8 taskId);
+static void DebugAction_Randomizer_ToggleEggMon(u8 taskId);
+static void DebugAction_Randomizer_ToggleAbilities(u8 taskId);
+static void DebugAction_Randomizer_CycleSpeciesMode(u8 taskId);
+#endif
+
 static void DebugAction_Give_Item(u8 taskId);
 static void DebugAction_Give_Item_SelectId(u8 taskId);
 static void DebugAction_Give_Item_SelectQuantity(u8 taskId);
@@ -577,6 +589,21 @@ static const struct DebugMenuOption sDebugMenu_Actions_FollowerNPCMenu[] =
     { NULL }
 };
 
+#if RANDOMIZER_AVAILABLE == TRUE
+static const struct DebugMenuOption sDebugMenu_Actions_Randomizer[] =
+{
+    { COMPOUND_STRING("Wild mons: toggle"),      DebugAction_Randomizer_ToggleWildMon },
+    { COMPOUND_STRING("Trainer mons: toggle"),   DebugAction_Randomizer_ToggleTrainerMon },
+    { COMPOUND_STRING("Field items: toggle"),    DebugAction_Randomizer_ToggleFieldItems },
+    { COMPOUND_STRING("Fixed encounters: toggle"), DebugAction_Randomizer_ToggleFixedMon },
+    { COMPOUND_STRING("Starters/gifts: toggle"), DebugAction_Randomizer_ToggleStarterAndGiftMon },
+    { COMPOUND_STRING("Gift eggs: toggle"),      DebugAction_Randomizer_ToggleEggMon },
+    { COMPOUND_STRING("Abilities: toggle"),      DebugAction_Randomizer_ToggleAbilities },
+    { COMPOUND_STRING("Species mode: cycle"),    DebugAction_Randomizer_CycleSpeciesMode },
+    { NULL }
+};
+#endif
+
 static const struct DebugMenuOption sDebugMenu_Actions_Utilities[] =
 {
     { COMPOUND_STRING("Fly to map…"),       DebugAction_Util_Fly },
@@ -591,6 +618,9 @@ static const struct DebugMenuOption sDebugMenu_Actions_Utilities[] =
     { COMPOUND_STRING("Follower NPC…"),     DebugAction_OpenSubMenu, sDebugMenu_Actions_FollowerNPCMenu },
     { COMPOUND_STRING("Wally Tutorial"),    DebugAction_ExecuteScript, Debug_EventScript_WallyTutorial },
     { COMPOUND_STRING("Steven Multi"),      DebugAction_ExecuteScript, Debug_EventScript_Steven_Multi },
+    #if RANDOMIZER_AVAILABLE == TRUE
+    { COMPOUND_STRING("Randomizer…"),       DebugAction_OpenSubMenu, sDebugMenu_Actions_Randomizer },
+    #endif
     { NULL }
 };
 
@@ -2494,6 +2524,76 @@ static void DebugAction_FlagsVars_RunningShoes(u8 taskId)
         PlaySE(SE_PC_LOGIN);
     FlagToggle(FLAG_SYS_B_DASH);
 }
+
+#if RANDOMIZER_AVAILABLE == TRUE
+static void Debug_Randomizer_ToggleFeatureFlag(u16 flag)
+{
+    if (FlagGet(flag))
+        PlaySE(SE_PC_OFF);
+    else
+        PlaySE(SE_PC_LOGIN);
+    FlagToggle(flag);
+}
+
+static void DebugAction_Randomizer_ToggleWildMon(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_WILD_MON
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_WILD_MON);
+#endif
+}
+
+static void DebugAction_Randomizer_ToggleTrainerMon(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_TRAINER_MON
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_TRAINER_MON);
+#endif
+}
+
+static void DebugAction_Randomizer_ToggleFieldItems(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_FIELD_ITEMS
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_FIELD_ITEMS);
+#endif
+}
+
+static void DebugAction_Randomizer_ToggleFixedMon(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_FIXED_MON
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_FIXED_MON);
+#endif
+}
+
+static void DebugAction_Randomizer_ToggleStarterAndGiftMon(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_STARTER_AND_GIFT_MON
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_STARTER_AND_GIFT_MON);
+#endif
+}
+
+static void DebugAction_Randomizer_ToggleEggMon(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_EGG_MON
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_EGG_MON);
+#endif
+}
+
+static void DebugAction_Randomizer_ToggleAbilities(u8 taskId)
+{
+#ifdef RANDOMIZER_FLAG_ABILITIES
+    Debug_Randomizer_ToggleFeatureFlag(RANDOMIZER_FLAG_ABILITIES);
+#endif
+}
+
+static void DebugAction_Randomizer_CycleSpeciesMode(u8 taskId)
+{
+    u16 mode = (VarGet(RANDOMIZER_VAR_SPECIES_MODE) + 1) % MAX_MON_MODE;
+    VarSet(RANDOMIZER_VAR_SPECIES_MODE, mode);
+    PlaySE(SE_SELECT);
+#if RANDOMIZER_DYNAMIC_SPECIES == TRUE
+    PreloadRandomizationTables();
+#endif
+}
+#endif // RANDOMIZER_AVAILABLE
 
 static void DebugAction_FlagsVars_ToggleFlyFlags(u8 taskId)
 {
@@ -4941,7 +5041,7 @@ const struct Trainer* GetDebugAiTrainer(void)
 static void DebugAction_Party_SetParty(u8 taskId)
 {
     ZeroPlayerPartyMons();
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER);
+    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER, 0);
     ScriptContext_Enable();
     Debug_DestroyMenu_Full(taskId);
 }
@@ -4950,8 +5050,8 @@ static void DebugAction_Party_BattleSingle(u8 taskId)
 {
     ZeroPlayerPartyMons();
     ZeroEnemyPartyMons();
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER);
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_OPPONENT_A], GetDebugAiTrainer(), FALSE, BATTLE_TYPE_TRAINER);
+    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER, 0);
+    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_OPPONENT_A], GetDebugAiTrainer(), FALSE, BATTLE_TYPE_TRAINER, 0);
 
     gBattleTypeFlags = BATTLE_TYPE_TRAINER;
     if (sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_AI].battleType == TRAINER_BATTLE_TYPE_DOUBLES)

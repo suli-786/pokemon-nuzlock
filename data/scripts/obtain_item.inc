@@ -107,6 +107,8 @@ Std_FindItem::
 	lock
 	faceplayer
 	waitse
+	@ Randomizer hook; no-op unless the randomizer is compiled in and enabled.
+	callnative FindItemRandomize_NativeCall
 	copyvar VAR_0x8006, ITEMID
 	copyvar VAR_0x8004, ITEMID
 	copyvar VAR_0x8005, AMOUNT
@@ -175,6 +177,8 @@ EventScript_NoRoomToPickUpItem::
 EventScript_HiddenItemScript::
 	lockall
 	waitse
+	@ Randomizer hook; no-op unless the randomizer is compiled in and enabled.
+	callnative FindHiddenItemRandomize_NativeCall
 	goto_if_eq VAR_0x8005, 0, EventScript_TryPickUpHiddenCoins
 	copyvar VAR_0x8006, VAR_0x8005
 	additem VAR_0x8005, VAR_0x8009

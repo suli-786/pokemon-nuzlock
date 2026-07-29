@@ -23,6 +23,7 @@
 #include "window.h"
 #include "constants/songs.h"
 #include "constants/rgb.h"
+#include "randomizer.h"
 
 #define STARTER_MON_COUNT   3
 
@@ -351,6 +352,21 @@ u16 GetStarterPokemon(u16 chosenStarterId)
 {
     if (chosenStarterId > STARTER_MON_COUNT)
         chosenStarterId = 0;
+
+    #if RANDOMIZER_AVAILABLE == TRUE
+    {
+        // Starters are randomized through the shared starter/gift mon table so
+        // that a species is only handed out once (and so showmonpic-style
+        // hooks can display the same result).
+        u32 i;
+        for (i = 0; i < STARTER_AND_GIFT_MON_COUNT; i++)
+        {
+            if (gStarterAndGiftMonTable[i] == sStarterMon[chosenStarterId])
+                return RandomizeStarterAndGiftMon(i, gStarterAndGiftMonTable);
+        }
+    }
+    #endif
+
     return sStarterMon[chosenStarterId];
 }
 

@@ -65,6 +65,7 @@
 #include "battle.h"
 #include "constants/comparison_operators.h"
 #include "constants/event_objects.h"
+#include "randomizer.h"
 #include "constants/map_types.h"
 #include "constants/party_menu.h"
 
@@ -2522,6 +2523,18 @@ bool8 ScrCmd_setwildbattle(struct ScriptContext *ctx)
     enum Item item2 = ScriptReadHalfword(ctx);
 
     Script_RequestEffects(SCREFF_V1);
+
+    #if RANDOMIZER_AVAILABLE == TRUE
+    {
+        u8 mapNum = gSaveBlock1Ptr->location.mapNum;
+        u8 mapGroup = gSaveBlock1Ptr->location.mapGroup;
+        u8 localId = gObjectEvents[gSelectedObjectEvent].localId;
+
+        species = RandomizeFixedEncounterMon(species, mapNum, mapGroup, localId);
+        if (species2 != SPECIES_NONE)
+            species2 = RandomizeFixedEncounterMon(species2, mapNum, mapGroup, localId);
+    }
+    #endif
 
     if (species2 == SPECIES_NONE)
     {

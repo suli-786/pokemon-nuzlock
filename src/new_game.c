@@ -51,6 +51,7 @@
 #include "constants/items.h"
 #include "difficulty.h"
 #include "follower_npc.h"
+#include "randomizer.h"
 
 extern const u8 EventScript_ResetAllMapFlags[];
 extern const u8 EventScript_ResetAllMapFlagsFrlg[];
@@ -231,6 +232,12 @@ void NewGameInitData(void)
     ResetTrainerTowerResults();
     ResetContestLinkResults();
     SetCurrentDifficultyLevel(DIFFICULTY_NORMAL);
+
+    #if (RANDOMIZER_AVAILABLE == TRUE) && (RANDOMIZER_DYNAMIC_SPECIES == TRUE)
+        // Overhaul default: similar-strength (BST) mapping, per docs/overhaul/ROADMAP.md 7.12
+        VarSet(RANDOMIZER_VAR_SPECIES_MODE, MON_RANDOM_BST);
+        PreloadRandomizationTables();
+    #endif
     ResetItemFlags();
     ResetDexNav();
     ClearFollowerNPCData();

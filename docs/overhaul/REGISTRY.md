@@ -10,6 +10,7 @@ Pool: 375+ `FLAG_UNUSED_0x*` ids in `include/constants/flags.h` (+ `DAILY_FLAGS`
 |---|---|---|---|
 | `FLAG_OVERHAUL_NO_WILD_ENCOUNTERS` | `FLAG_UNUSED_0x264` | encounters | assigned to `WE_FLAG_NO_ENCOUNTER` (Phase 1) |
 | `FLAG_OVERHAUL_NO_TRAINER_SEE` | `FLAG_UNUSED_0x265` | encounters | assigned to `OW_FLAG_NO_TRAINER_SEE` (Phase 1) |
+| — randomizer feature flags (0x020..0x026, referenced not renamed) | `FLAG_UNUSED_0x020`–`0x026` | randomizer | `RANDOMIZER_FLAG_{WILD_MON,FIELD_ITEMS,TRAINER_MON,FIXED_MON,STARTER_AND_GIFT_MON,EGG_MON,ABILITIES}` via `include/config/randomizer.h`; inert while `RANDOMIZER_AVAILABLE` is FALSE |
 | — reserved block: QoL toggles (0x266..0x26B) | TBD at assignment | dialog/encounters | `I_EXP_SHARE_FLAG`, `OW_FLAG_POKE_RIDER`, spares (`FLAG_TEXT_SPEED_INSTANT` unneeded — instant text is global) |
 | — reserved block: nuzlocke (≤8 flags) | TBD | nuzlocke engine | run-active, mode bits, `WE_FLAG_NO_CATCHING` dupe gate |
 | — reserved block: quizzes (contiguous run, size TBD by NPC count) | TBD | quiz NPCs | one-time reward flags; daily quizzes use `DAILY_FLAGS` |
@@ -26,6 +27,8 @@ Pool: 29 `VAR_UNUSED_0x40*` in `include/constants/vars.h`.
 | 1 × var | dialog-speed | `VAR_LAST_REPEL_LURE_USED` |
 | ≤2 × vars | nuzlocke | settings bitmask, run state |
 | ≤2 × vars | quiz/wager | tier/session scratch |
+| `VAR_UNUSED_0x404E` (referenced not renamed) | randomizer | `RANDOMIZER_VAR_SPECIES_MODE` via `include/config/randomizer.h`; inert while `RANDOMIZER_AVAILABLE` is FALSE |
+| `VAR_UNUSED_0x40FA`/`0x40FB` (conditional) | randomizer | seed storage only if `RANDOMIZER_SEED_IS_TRAINER_ID` is set to FALSE (default: seed = trainer ID, no vars used) |
 
 ## 3. Save-space ledger
 

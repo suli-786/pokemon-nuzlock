@@ -30,6 +30,7 @@
 #include "constants/items.h"
 #include "constants/layouts.h"
 #include "constants/weather.h"
+#include "randomizer.h"
 
 extern const u8 EventScript_SprayWoreOff[];
 
@@ -531,7 +532,17 @@ bool8 TryGenerateWildMon(const struct WildPokemonInfo *wildMonInfo, enum WildPok
     if (gMapHeader.mapLayoutId != LAYOUT_BATTLE_FRONTIER_BATTLE_PIKE_ROOM_WILD_MONS && flags & WILD_CHECK_KEEN_EYE && !IsAbilityAllowingEncounter(level))
         return FALSE;
 
-    CreateWildMon(wildMonInfo->wildPokemon[wildMonIndex].species, level);
+    {
+        enum Species species = wildMonInfo->wildPokemon[wildMonIndex].species;
+        #if RANDOMIZER_AVAILABLE == TRUE
+            species = RandomizeWildEncounter(
+                species,
+                gSaveBlock1Ptr->location.mapNum,
+                gSaveBlock1Ptr->location.mapGroup,
+                area, wildMonIndex);
+        #endif
+        CreateWildMon(species, level);
+    }
     return TRUE;
 }
 
@@ -542,6 +553,13 @@ static u16 GenerateFishingWildMon(const struct WildPokemonInfo *wildMonInfo, u8 
     u8 level = ChooseWildMonLevel(wildMonInfo->wildPokemon, wildMonIndex, WILD_AREA_FISHING);
 
     UpdateChainFishingStreak();
+    #if RANDOMIZER_AVAILABLE == TRUE
+        wildMonSpecies = RandomizeWildEncounter(
+            wildMonSpecies,
+            gSaveBlock1Ptr->location.mapNum,
+            gSaveBlock1Ptr->location.mapGroup,
+            WILD_AREA_FISHING, wildMonIndex);
+    #endif
     CreateWildMon(wildMonSpecies, level);
     return wildMonSpecies;
 }
@@ -971,24 +989,45 @@ u16 GetLocalWildMon(bool8 *isWaterMon)
     // Neither
     if (landMonsInfo == NULL && waterMonsInfo == NULL)
         return SPECIES_NONE;
-    // Land Pokémon
-    else if (landMonsInfo != NULL && waterMonsInfo == NULL)
-        return landMonsInfo->wildPokemon[ChooseWildMonIndex_Land()].species;
-    // Water Pokémon
-    else if (landMonsInfo == NULL && waterMonsInfo != NULL)
+
     {
-        *isWaterMon = TRUE;
-        return waterMonsInfo->wildPokemon[ChooseWildMonIndex_Water()].species;
-    }
-    // Either land or water Pokémon
-    if ((Random() % 100) < 80)
-    {
-        return landMonsInfo->wildPokemon[ChooseWildMonIndex_Land()].species;
-    }
-    else
-    {
-        *isWaterMon = TRUE;
-        return waterMonsInfo->wildPokemon[ChooseWildMonIndex_Water()].species;
+        u8 index;
+        u16 species;
+
+        // Land Pokémon
+        if (landMonsInfo != NULL && waterMonsInfo == NULL)
+        {
+            index = ChooseWildMonIndex_Land();
+            species = landMonsInfo->wildPokemon[index].species;
+        }
+        // Water Pokémon
+        else if (landMonsInfo == NULL && waterMonsInfo != NULL)
+        {
+            *isWaterMon = TRUE;
+            index = ChooseWildMonIndex_Water();
+            species = waterMonsInfo->wildPokemon[index].species;
+        }
+        // Either land or water Pokémon
+        else if ((Random() % 100) < 80)
+        {
+            index = ChooseWildMonIndex_Land();
+            species = landMonsInfo->wildPokemon[index].species;
+        }
+        else
+        {
+            *isWaterMon = TRUE;
+            index = ChooseWildMonIndex_Water();
+            species = waterMonsInfo->wildPokemon[index].species;
+        }
+
+        #if RANDOMIZER_AVAILABLE == TRUE
+            species = RandomizeWildEncounter(
+                species, gWildMonHeaders[headerId].mapNum,
+                gWildMonHeaders[headerId].mapGroup,
+                *isWaterMon ? WILD_AREA_WATER : WILD_AREA_LAND, index);
+        #endif
+
+        return species;
     }
 }
 
@@ -1004,7 +1043,17 @@ u16 GetLocalWaterMon(void)
         const struct WildPokemonInfo *waterMonsInfo = gWildMonHeaders[headerId].encounterTypes[timeOfDay].waterMonsInfo;
 
         if (waterMonsInfo)
-            return waterMonsInfo->wildPokemon[ChooseWildMonIndex_Water()].species;
+        {
+            u8 index = ChooseWildMonIndex_Water();
+            u16 species = waterMonsInfo->wildPokemon[index].species;
+            #if RANDOMIZER_AVAILABLE == TRUE
+                species = RandomizeWildEncounter(
+                    species, gWildMonHeaders[headerId].mapNum,
+                    gWildMonHeaders[headerId].mapGroup, WILD_AREA_WATER,
+                    index);
+            #endif
+            return species;
+        }
     }
     return SPECIES_NONE;
 }

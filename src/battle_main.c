@@ -79,6 +79,7 @@
 #include "constants/trainers.h"
 #include "constants/weather.h"
 #include "cable_club.h"
+#include "randomizer.h"
 
 extern const struct BgTemplate gBattleBgTemplates[];
 extern const struct WindowTemplate *const gBattleWindowTemplates[];
@@ -1861,7 +1862,7 @@ void CustomTrainerPartyAssignMoves(struct Pokemon *mon, const struct TrainerMon 
     }
 }
 
-u8 CreateNPCTrainerPartyFromTrainer(struct Pokemon *party, const struct Trainer *trainer, bool32 halfTeam, u32 battleTypeFlags)
+u8 CreateNPCTrainerPartyFromTrainer(struct Pokemon *party, const struct Trainer *trainer, bool32 halfTeam, u32 battleTypeFlags, u16 seed)
 {
     u32 personalityValue;
     u8 monsCount;
@@ -1894,6 +1895,11 @@ u8 CreateNPCTrainerPartyFromTrainer(struct Pokemon *party, const struct Trainer 
             const struct TrainerMon *partyData = trainer->party;
             struct OriginalTrainerId otId = OTID_STRUCT_RANDOM_NO_SHINY;
             u32 abilityNum = 0;
+            enum Species species = partyData[monIndex].species;
+
+            #if RANDOMIZER_AVAILABLE == TRUE
+                species = RandomizeTrainerMon(seed, i, monsCount, species);
+            #endif
 
             if (trainer->battleType != TRAINER_BATTLE_TYPE_SINGLES)
                 personalityValue = 0x80;
@@ -1915,7 +1921,7 @@ u8 CreateNPCTrainerPartyFromTrainer(struct Pokemon *party, const struct Trainer 
                 otId.method = OT_ID_PRESET;
                 otId.value = HIHALF(personalityValue) ^ LOHALF(personalityValue);
             }
-            CreateMon(&party[i], partyData[monIndex].species, partyData[monIndex].lvl, personalityValue, otId);
+            CreateMon(&party[i], species, partyData[monIndex].lvl, personalityValue, otId);
             SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[monIndex].heldItem);
 
             CustomTrainerPartyAssignMoves(&party[i], &partyData[monIndex]);
@@ -2020,11 +2026,11 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum)
         if (tempTrainer.partySize == 0)
             tempTrainer.partySize = origTrainer->partySize;
 
-        retVal = CreateNPCTrainerPartyFromTrainer(party, (const struct Trainer *)(&tempTrainer), halfTeam, gBattleTypeFlags);
+        retVal = CreateNPCTrainerPartyFromTrainer(party, (const struct Trainer *)(&tempTrainer), halfTeam, gBattleTypeFlags, trainerNum);
     }
     else
     {
-        retVal = CreateNPCTrainerPartyFromTrainer(party, GetTrainerStructFromId(trainerNum), halfTeam, gBattleTypeFlags);
+        retVal = CreateNPCTrainerPartyFromTrainer(party, GetTrainerStructFromId(trainerNum), halfTeam, gBattleTypeFlags, trainerNum);
     }
     return retVal;
 }
@@ -2035,7 +2041,7 @@ void CreateTrainerPartyForPlayer(void)
 
     ZeroPlayerPartyMons();
     gPartnerTrainerId = gSpecialVar_0x8004;
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], GetTrainerStructFromId(gSpecialVar_0x8004), TRUE, BATTLE_TYPE_TRAINER);
+    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], GetTrainerStructFromId(gSpecialVar_0x8004), TRUE, BATTLE_TYPE_TRAINER, gSpecialVar_0x8004);
 }
 
 void VBlankCB_Battle(void)

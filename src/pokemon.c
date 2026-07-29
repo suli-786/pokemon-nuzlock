@@ -73,6 +73,7 @@
 #include "constants/trainers.h"
 #include "constants/union_room.h"
 #include "constants/weather.h"
+#include "randomizer.h"
 
 extern u16 gSpecialVar_ItemId;
 
@@ -3141,6 +3142,14 @@ enum Ability GetAbilityBySpecies(enum Species species, u8 abilityNum)
     {
         gLastUsedAbility = GetSpeciesAbility(species, i);
     }
+
+    // Randomizer hook: identity unless the ability feature is enabled.
+    // (Simplified from the source branch, which threaded a per-mon
+    // cantRandomizeAbility bit through this function's signature.)
+    #if RANDOMIZER_AVAILABLE == TRUE
+        if (gLastUsedAbility != ABILITY_NONE)
+            gLastUsedAbility = RandomizeAbility(species, abilityNum, gLastUsedAbility);
+    #endif
 
     return gLastUsedAbility;
 }
