@@ -61,7 +61,7 @@ SaveBlock3 reservations (target ≤1300 B, keep ≥300 B margin for upstream mer
 | Bit | Was | Module | Purpose |
 |---|---|---|---|
 | `struct BoxPokemon.isDead:1` (`include/pokemon.h`) | `unused_13:1` | nuzlocke engine | permadeath marker, readable via `MON_DATA_IS_DEAD`. This was the **last free bit in `BoxPokemon`** — any other workstream that wants a per-mon bit now needs a different home. |
-| PC box `TOTAL_BOXES_COUNT - 1` (box 13) | box "BOX14" | nuzlocke engine | the graveyard. `CopyMonToPC`, `IsDestinationBoxFull`, `TryStorePartyMonInBox` and `UpdateBoxToSendMons` all skip it, so living Pokémon never land there. |
+| PC box `TOTAL_BOXES_COUNT - 1` (box 13) | box "BOX14" | nuzlocke engine | the graveyard. `CopyMonToPC`, `IsDestinationBoxFull` and `UpdateBoxToSendMons` all skip it, so living Pokémon never land there. Under `SWSH_STORAGE_SYSTEM` the deposit-side gate is `CanDepositMonInBox` in `src/swsh_storage_system.c` (the SwSh screen has no `TryStorePartyMonInBox`). |
 
 **Banned by ledger:** `USE_DEXNAV_SEARCH_LEVELS` (~1500 B — does not fit alongside the tracker; DexNav itself is fine). `OW_SHOW_ITEM_DESCRIPTIONS=FIRST_TIME` (SB3 cost, use ALWAYS mode). `FNPC_ENABLE_NPC_FOLLOWERS` grows SB3 — claim a row first if ever wanted.
 
@@ -79,9 +79,10 @@ Every ported branch/asset/tutorial gets a row when its code lands (CREDITS.md ge
 | TheXaman | tracker storage scheme, registered-items menu, options-plus | pending |
 | iriv24 | registered-items expansion update | pending |
 | fisham33 | select-mons (pick-4), battle-mode toggle | pending |
-| Montblanc (montmoguri) | SwSh UI suite | partially landed — see the two rows below; storage / party / bag branches still pending |
+| Montblanc (montmoguri) | SwSh UI suite | partially landed — see the three rows below; party / bag branches still pending |
 | Montblanc (montmoguri), branch `swsh_map_popups` | SwSh map name pop-up: `graphics/map_popup/swsh.png`, the `GEN_8` paths in `src/map_name_popup.c` + `src/menu.c` | **landed** (Phase 4 UI port). `OW_POPUP_GENERATION = GEN_8`. |
 | Montblanc (montmoguri), branch `swsh_summary_screen` | SwSh summary screen: `src/swsh_summary_screen.c`, `include/swsh_summary_screen.h`, 30 assets under `graphics/summary_screen/swsh/`, plus the shim hunks in `pokemon.c`/`pokemon.h`/`pokemon_summary_screen.c`/`.h` | **landed** (Phase 4 UI port). Master toggle relocated to `include/config/swsh_ui.h`; IV/EV reads routed through `GetAdjustedIvData` for hyper-training. |
+| Montblanc (montmoguri), branch `swsh_storage_system` | SwSh PC box screen: `src/swsh_storage_system.c`, `src/data/swsh_storage_system.h`, `include/swsh_storage_system.h`, 58 assets under `graphics/pokemon_storage/swsh/`, plus the 5 redirect hunks in `src/pokemon_storage_system.c` | **landed** (Phase 4 UI port). Master toggle relocated to `include/config/swsh_ui.h`; all five nuzlocke PC gates re-implemented inside the new screen — see docs/overhaul/UI_PORT_CHECKLIST.md §3.3. Ships no `comfy_anim` copy. |
 | pret / pokefirered (via Montblanc) | `src/comfy_anim.c` + `include/comfy_anim.h` — the easing/spring animation module. Originates in **pret/pokefirered**; both Montblanc branches ship a byte-identical copy, landed once here. | **landed** (Phase 4 UI port), with our hardening — see docs/overhaul/UI_PORT_CHECKLIST.md §3.1 |
 | pollythadon (+ EternalCode, PlatinumMaster, NicoSwag, mudskipper13) | BW battle UI (if adopted) | pending |
 | miriamlefae | Unbound-style start menu (if adopted) | pending |
