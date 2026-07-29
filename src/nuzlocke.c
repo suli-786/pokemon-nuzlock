@@ -613,14 +613,19 @@ void NuzlockeOnBattleEnd(void)
 bool32 NuzlockeIsBlockedReviveItem(u32 item)
 {
 #if NUZLOCKE_PERMADEATH == TRUE && NUZLOCKE_BLOCK_REVIVES == TRUE
-    const u8 *effect = GetItemEffect(item);
-
-    if (effect == NULL)
+    // Match on the item, NOT on its effect bits. ITEM4_REVIVE is also set by
+    // gItemEffect_RareCandy (it is how the level-up HP restore is expressed),
+    // so testing the bit blocked every Rare/Exp/Cap/Endless Candy in the game.
+    switch (item)
+    {
+    case ITEM_REVIVE:
+    case ITEM_MAX_REVIVE:
+    case ITEM_REVIVAL_HERB:
+    case ITEM_SACRED_ASH:
+        return TRUE;
+    default:
         return FALSE;
-
-    // Revive / Max Revive / Revival Herb use ITEM4_REVIVE; Sacred Ash uses
-    // ITEM0_SACRED_ASH.
-    return (effect[0] & ITEM0_SACRED_ASH) || (effect[4] & ITEM4_REVIVE);
+    }
 #else
     return FALSE;
 #endif
