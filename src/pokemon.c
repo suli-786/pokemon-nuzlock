@@ -3506,6 +3506,7 @@ const u32 sExpCandyExperienceTable[] = {
     [EXP_3000 - 1] = 3000,
     [EXP_10000 - 1] = 10000,
     [EXP_30000 - 1] = 30000,
+    [EXP_TO_CAP - 1] = 2000000, // Overhaul: always clamped down to the level cap
 };
 
 // Returns TRUE if the item has no effect on the Pokémon, FALSE otherwise

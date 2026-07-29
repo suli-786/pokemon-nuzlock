@@ -243,6 +243,12 @@ void NewGameInitData(void)
     #endif
     ResetItemFlags();
     ResetDexNav();
+    // Overhaul: the kit starts in the bag, exactly as Randolocke grants it
+    // (one of each, in NewGameInitData, no NPC involved).
+    AddBagItem(ITEM_ENDLESS_CANDY, 1);
+    AddBagItem(ITEM_CAP_CANDY, 1);
+    AddBagItem(ITEM_REPELLANT, 1);
+    AddBagItem(ITEM_PORTA_HEAL, 1);
     NuzlockeInitNewRun();
     ClearFollowerNPCData();
 }

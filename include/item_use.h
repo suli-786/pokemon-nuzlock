@@ -21,7 +21,6 @@ void ItemUseOutOfBattle_SacredAsh(u8 taskId);
 void ItemUseOutOfBattle_PPRecovery(u8 taskId);
 void ItemUseOutOfBattle_PPUp(u8 taskId);
 void ItemUseOutOfBattle_RareCandy(u8 taskId);
-void ItemUseOutOfBattle_CapCandy(u8 taskId);
 void ItemUseOutOfBattle_PortaHeal(u8 taskId);
 void ItemUseOutOfBattle_Repellant(u8 taskId);
 void ItemUseOutOfBattle_DynamaxCandy(u8 taskId);

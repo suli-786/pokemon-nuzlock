@@ -66,3 +66,25 @@ OldaleTown_Mart_Text_RestoreHPWithPotion:
 	.string "To prevent your POKéMON from fainting,\n"
 	.string "restore its HP with a POTION.$"
 
+@ addmoney clamps at MAX_MONEY, so adding 999999 always leaves exactly 999,999.
+OldaleTown_Mart_EventScript_MoneyMan::
+	lock
+	faceplayer
+	msgbox OldaleTown_Mart_Text_MoneyManIntro, MSGBOX_DEFAULT
+	playse SE_SHOP
+	showmoneybox 0, 0
+	addmoney 999999
+	updatemoneybox
+	msgbox OldaleTown_Mart_Text_MoneyManOutro, MSGBOX_DEFAULT
+	hidemoneybox
+	release
+	end
+
+OldaleTown_Mart_Text_MoneyManIntro:
+	.string "Money? In this world it's just\n"
+	.string "paper. Here, take all of mine!$"
+
+OldaleTown_Mart_Text_MoneyManOutro:
+	.string "Your wallet is stuffed full!\p"
+	.string "Spent it all? Come see me again.\n"
+	.string "There's plenty more.$"

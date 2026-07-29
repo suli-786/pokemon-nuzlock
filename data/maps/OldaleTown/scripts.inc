@@ -414,49 +414,6 @@ OldaleTown_EventScript_BallLadyBagFull::
 	end
 
 @ Money Man — repeatable: sets money to the maximum (999,999) every talk.
-@ addmoney clamps at MAX_MONEY, so adding 999999 always leaves exactly 999,999.
-OldaleTown_EventScript_MoneyMan::
-	lock
-	faceplayer
-	msgbox OldaleTown_Text_MoneyManIntro, MSGBOX_DEFAULT
-	playse SE_SHOP
-	showmoneybox 0, 0
-	addmoney 999999
-	updatemoneybox
-	msgbox OldaleTown_Text_MoneyManOutro, MSGBOX_DEFAULT
-	hidemoneybox
-	release
-	end
-
-@ Quartermaster — ONE-TIME (FLAG_OVERHAUL_QUARTERMASTER_KIT): the four kit items.
-OldaleTown_EventScript_Quartermaster::
-	lock
-	faceplayer
-	goto_if_set FLAG_OVERHAUL_QUARTERMASTER_KIT, OldaleTown_EventScript_QuartermasterDone
-	msgbox OldaleTown_Text_QuartermasterIntro, MSGBOX_DEFAULT
-	giveitem ITEM_CAP_CANDY
-	goto_if_eq VAR_RESULT, FALSE, OldaleTown_EventScript_QuartermasterBagFull
-	giveitem ITEM_ENDLESS_CANDY
-	goto_if_eq VAR_RESULT, FALSE, OldaleTown_EventScript_QuartermasterBagFull
-	giveitem ITEM_PORTA_HEAL
-	goto_if_eq VAR_RESULT, FALSE, OldaleTown_EventScript_QuartermasterBagFull
-	giveitem ITEM_REPELLANT
-	goto_if_eq VAR_RESULT, FALSE, OldaleTown_EventScript_QuartermasterBagFull
-	setflag FLAG_OVERHAUL_QUARTERMASTER_KIT
-	msgbox OldaleTown_Text_QuartermasterOutro, MSGBOX_DEFAULT
-	release
-	end
-
-OldaleTown_EventScript_QuartermasterBagFull::
-	msgbox gText_TooBadBagIsFull, MSGBOX_DEFAULT
-	release
-	end
-
-OldaleTown_EventScript_QuartermasterDone::
-	msgbox OldaleTown_Text_QuartermasterDone, MSGBOX_DEFAULT
-	release
-	end
-
 OldaleTown_Text_BallLadyIntro:
 	.string "I've collected far too many\n"
 	.string "Ultra Balls over the years.\p"
@@ -466,29 +423,3 @@ OldaleTown_Text_BallLadyIntro:
 OldaleTown_Text_BallLadyOutro:
 	.string "Come back whenever you run out.\n"
 	.string "I have crates of the things!$"
-
-OldaleTown_Text_MoneyManIntro:
-	.string "Money? In this world it's just\n"
-	.string "paper. Here, take all of mine!$"
-
-OldaleTown_Text_MoneyManOutro:
-	.string "Your wallet is stuffed full!\p"
-	.string "Spent it all? Come see me again.\n"
-	.string "There's plenty more.$"
-
-OldaleTown_Text_QuartermasterIntro:
-	.string "Heading out on a dangerous run,\n"
-	.string "are you?\p"
-	.string "Every trainer gets one standard-\n"
-	.string "issue field kit. This is yours.$"
-
-OldaleTown_Text_QuartermasterOutro:
-	.string "Cap Candy, Endless Candy,\n"
-	.string "Porta Heal, and a Repellant.\p"
-	.string "They never wear out.\n"
-	.string "Use them well.$"
-
-OldaleTown_Text_QuartermasterDone:
-	.string "One kit per trainer.\n"
-	.string "Make yours count.$"
-

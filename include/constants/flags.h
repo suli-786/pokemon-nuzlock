@@ -666,7 +666,7 @@
 
 #define FLAG_OVERHAUL_NO_WILD_ENCOUNTERS  0x264 // Overhaul: wild encounters off while set (docs/overhaul/REGISTRY.md)
 #define FLAG_OVERHAUL_NO_TRAINER_SEE  0x265 // Overhaul: trainers only battle when talked to (docs/overhaul/REGISTRY.md)
-#define FLAG_OVERHAUL_QUARTERMASTER_KIT  0x266 // Overhaul: Oldale Quartermaster one-time item kit given (docs/overhaul/REGISTRY.md)
+#define FLAG_UNUSED_0x266  0x266 // Unused Flag
 #define FLAG_UNUSED_0x267  0x267 // Unused Flag
 #define FLAG_UNUSED_0x268  0x268 // Unused Flag
 #define FLAG_UNUSED_0x269  0x269 // Unused Flag

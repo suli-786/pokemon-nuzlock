@@ -1115,6 +1115,9 @@ enum BerryId
 #define EXP_3000  3
 #define EXP_10000 4
 #define EXP_30000 5
+// Overhaul: exceeds the level-100 requirement of every growth rate, so the
+// hard-cap clamp in PokemonUseItemEffects always binds. Used by Cap Candy.
+#define EXP_TO_CAP 6
 
 // Item type IDs (used to determine the exit callback)
 enum ItemType

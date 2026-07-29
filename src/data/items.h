@@ -15833,7 +15833,7 @@ const struct ItemInfo gItemsInfo[] =
         .iconPalette = gItemIconPalette_PokeshiDoll,
     },
 
-// Overhaul custom kit (Phase 2a) — infinite-use QoL items, delivered by the Oldale Quartermaster.
+// Overhaul custom kit — infinite-use QoL items, in the bag from New Game (as in Randolocke).
 
     [ITEM_CAP_CANDY] =
     {
@@ -15842,6 +15842,11 @@ const struct ItemInfo gItemsInfo[] =
         .price = 0,
         .importance = 1,
         .notConsumed = TRUE,
+        // An Exp Candy whose experience always exceeds the cap, so the hard-cap
+        // clamp in PokemonUseItemEffects lands the mon exactly on the level cap
+        // in one use. Reuses the stock candy path, which then runs the normal
+        // stats + move-learn + evolution chain.
+        .holdEffectParam = EXP_TO_CAP,
         .description = COMPOUND_STRING(
             "Endlessly raises a\n"
             "Pokémon's level to\n"
@@ -15849,7 +15854,8 @@ const struct ItemInfo gItemsInfo[] =
         .pocket = POCKET_KEY_ITEMS,
         .sortType = ITEM_TYPE_LEVEL_UP_ITEM,
         .type = ITEM_USE_PARTY_MENU,
-        .fieldUseFunc = ItemUseOutOfBattle_CapCandy,
+        .fieldUseFunc = ItemUseOutOfBattle_RareCandy,
+        .effect = gItemEffect_RareCandy,
         .iconPic = gItemIcon_RareCandy,
         .iconPalette = gItemIconPalette_RareCandy,
     },
