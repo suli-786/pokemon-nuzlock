@@ -44,6 +44,7 @@
 #include "constants/rgb.h"
 #include "caps.h"
 #include "menu.h"
+#include "text_window.h"
 #include "pokemon_summary_screen.h"
 #include "type_icons.h"
 #include "pokedex.h"
@@ -908,7 +909,11 @@ void HandleInputChooseMove(enum BattlerId battler)
             }
 
             FillWindowPixelBuffer(B_WIN_MOVE_DESCRIPTION, PIXEL_FILL(0));
+#if SWSH_BATTLE_UI
+            ClearSwShMoveDescWindowAndFrame(B_WIN_MOVE_DESCRIPTION, FALSE);
+#else
             ClearStdWindowAndFrame(B_WIN_MOVE_DESCRIPTION, FALSE);
+#endif
             CopyWindowToVram(B_WIN_MOVE_DESCRIPTION, COPYWIN_GFX);
             PlaySE(SE_SELECT);
             if (B_SHOW_EFFECTIVENESS)
@@ -1784,8 +1789,22 @@ static void MoveSelectionDisplayMoveDescription(enum BattlerId battler)
     u8 cat_start[] = _("{CLEAR_TO 3}");
     u8 pwr_start[] = _("{CLEAR_TO 56}");
     u8 acc_start[] = _("{CLEAR_TO 108}");
+#if SWSH_BATTLE_UI
+    // CAT/PWR/ACC get their own colours; the description below reverts to the standard
+    // battle-interface colours.
+    u8 catPwrAcc_colors[] = _("{COLOR_HIGHLIGHT_SHADOW 14 5 13}");
+
+    LoadSwShMoveDescBoxGfx(B_WIN_MOVE_DESCRIPTION, SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM, BG_PLTT_ID(STD_WINDOW_PALETTE_NUM));
+    DrawSwShMoveDescFrame(B_WIN_MOVE_DESCRIPTION, FALSE);
+
+    // Two-tone body: the top 2 rows (the stat line) sit on a different fill than the
+    // 4 rows of description below it.
+    FillWindowPixelRect(B_WIN_MOVE_DESCRIPTION, PIXEL_FILL(5), 0, 0, 144, 16);
+    FillWindowPixelRect(B_WIN_MOVE_DESCRIPTION, PIXEL_FILL(14), 0, 16, 144, 32);
+#else
     LoadMessageBoxAndBorderGfx();
     DrawStdWindowFrame(B_WIN_MOVE_DESCRIPTION, FALSE);
+#endif
     if (pwr < 2)
         StringCopy(pwr_num, gText_BattleSwitchWhich5);
     else
@@ -1794,7 +1813,12 @@ static void MoveSelectionDisplayMoveDescription(enum BattlerId battler)
         StringCopy(acc_num, gText_BattleSwitchWhich5);
     else
         ConvertIntToDecimalStringN(acc_num, acc, STR_CONV_MODE_LEFT_ALIGN, 3);
+#if SWSH_BATTLE_UI
+    StringCopy(gDisplayedStringBattle, catPwrAcc_colors);
+    StringAppend(gDisplayedStringBattle, cat_start);
+#else
     StringCopy(gDisplayedStringBattle, cat_start);
+#endif
     StringAppend(gDisplayedStringBattle, cat_desc);
     StringAppend(gDisplayedStringBattle, pwr_start);
     StringAppend(gDisplayedStringBattle, pwr_desc);
@@ -1803,11 +1827,23 @@ static void MoveSelectionDisplayMoveDescription(enum BattlerId battler)
     StringAppend(gDisplayedStringBattle, acc_desc);
     StringAppend(gDisplayedStringBattle, acc_num);
     StringAppend(gDisplayedStringBattle, gText_NewLine);
+#if SWSH_BATTLE_UI
+    // Back to the standard colours for the description body.
+    StringAppend(gDisplayedStringBattle, gText_MoveInterfaceDynamicColors);
+    StringAppend(gDisplayedStringBattle, GetMoveDescription(move));
+    // B_WIN_COPYTOVRAM so the two-tone fills above are not flattened by a single-colour
+    // clear on the deferred copy.
+    BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_DESCRIPTION | B_WIN_COPYTOVRAM);
+
+    if (gCategoryIconSpriteId == 0xFF)
+        gCategoryIconSpriteId = CreateSprite(&gSpriteTemplate_SwShCategoryIcons, 39, 63, 1);
+#else
     StringAppend(gDisplayedStringBattle, GetMoveDescription(move));
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_DESCRIPTION);
 
     if (gCategoryIconSpriteId == 0xFF)
         gCategoryIconSpriteId = CreateSprite(&gSpriteTemplate_CategoryIcons, 38, 64, 1);
+#endif
 
     StartSpriteAnim(&gSprites[gCategoryIconSpriteId], cat);
 

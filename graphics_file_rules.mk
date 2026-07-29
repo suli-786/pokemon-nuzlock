@@ -23,6 +23,12 @@ $(BATINTGFXDIR)/textbox.gbapal: $(BATINTGFXDIR)/textbox_0.gbapal \
                                 $(BATINTGFXDIR)/textbox_1.gbapal
 	@cat $^ >$@
 
+# SWSH_BATTLE_UI battle textbox. Only the first of the two palettes was restyled, so the
+# second half is shared with the vanilla asset rather than duplicated.
+$(BATINTGFXDIR)/swsh/textbox.gbapal: $(BATINTGFXDIR)/swsh/textbox_0.gbapal \
+                                     $(BATINTGFXDIR)/textbox_1.gbapal
+	@cat $^ >$@
+
 $(BTLANMSPRGFXDIR)/ice_cube.4bpp: $(BTLANMSPRGFXDIR)/ice_cube_0.4bpp \
                                   $(BTLANMSPRGFXDIR)/ice_cube_1.4bpp \
                                   $(BTLANMSPRGFXDIR)/ice_cube_2.4bpp \

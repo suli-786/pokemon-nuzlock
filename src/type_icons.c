@@ -35,6 +35,27 @@ static s32 GetTypeIconHideMovement(bool32, u32);
 static s32 GetTypeIconSlideMovement(bool32, u32, s32);
 static s32 GetTypeIconBounceMovement(s32, u32);
 
+// SWSH_BATTLE_UI redraws the healthbox as a right-leaning parallelogram, which pushes the
+// *top* of the opponent's doubles frame 4px further right than the vanilla art. Type icons
+// are drawn behind the healthbox (subpriority 255 vs 1), so anything that lands under the
+// frame is simply hidden. Measured against the two arts:
+//
+//   position               vanilla covered   SwSh covered (before this shift)
+//   singles player L       3px of 8          3px, and only on the icon's top row
+//   singles opponent L     1px of 8          0-2px
+//   doubles player L/R     up to 8px         up to 3px
+//   doubles opponent L/R   2px of 8          6px of 8 on the whole upper icon  <-- regression
+//
+// Only the doubles opponent needed correcting: its frame's widest row reaches image
+// column 96, so the icons have to start at column 97, i.e. 6px further right. Every other
+// slot is the same or better than vanilla and is left alone.
+// See docs/overhaul/UI_PORT_CHECKLIST.md §3.6 for the full derivation.
+#if SWSH_BATTLE_UI
+#define SWSH_OPPONENT_DOUBLES_TYPE_ICON_X_SHIFT 6
+#else
+#define SWSH_OPPONENT_DOUBLES_TYPE_ICON_X_SHIFT 0
+#endif
+
 const struct Coords16 sTypeIconPositions[][2] =
 {
     [B_POSITION_PLAYER_LEFT] =
@@ -45,7 +66,7 @@ const struct Coords16 sTypeIconPositions[][2] =
     [B_POSITION_OPPONENT_LEFT] =
     {
         [FALSE] = {20, 26},
-        [TRUE] = {97, 14},
+        [TRUE] = {97 + SWSH_OPPONENT_DOUBLES_TYPE_ICON_X_SHIFT, 14},
     },
     [B_POSITION_PLAYER_RIGHT] =
     {
@@ -53,7 +74,7 @@ const struct Coords16 sTypeIconPositions[][2] =
     },
     [B_POSITION_OPPONENT_RIGHT] =
     {
-        [TRUE] = {85, 39},
+        [TRUE] = {85 + SWSH_OPPONENT_DOUBLES_TYPE_ICON_X_SHIFT, 39},
     },
 };
 

@@ -1,6 +1,8 @@
 #ifndef GUARD_TEXT_WINDOW_H
 #define GUARD_TEXT_WINDOW_H
 
+#include "config/swsh_ui.h"
+
 #define WINDOW_FRAMES_COUNT 20
 
 struct TilesPal
@@ -27,5 +29,8 @@ const u16 *GetTextWindowPalette(u8 id);
 const u16 *GetOverworldTextboxPalettePtr(void);
 void LoadSignPostWindowFrameGfx(void);
 void LoadDexNavWindowGfx(u8 windowId, u16 destOffset, u8 palOffset);
+#if SWSH_BATTLE_UI
+void LoadSwShMoveDescBoxGfx(u8 windowId, u16 destOffset, u8 palOffset);
+#endif
 
 #endif // GUARD_TEXT_WINDOW_H

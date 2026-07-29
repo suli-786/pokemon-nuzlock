@@ -17,6 +17,12 @@
 #define SWSH_PARTY_MENU         TRUE    // Sword/Shield style party menu.            Tuning: include/swsh_party_menu.h
 #define SWSH_MESSAGE_BOX        TRUE    // Sword/Shield style message box + name box. Tuning: include/menu.h, include/config/name_box.h
 #define SWSH_ITEM_MENU          TRUE    // Sword/Shield style bag screen.            Tuning: include/swsh_item_menu.h
+#define SWSH_BATTLE_UI          TRUE    // Sword/Shield style battle HUD.            Tuning: include/menu.h, src/battle_interface.c
+
+// SWSH_BATTLE_UI is the least finished of the six: see docs/overhaul/UI_PORT_CHECKLIST.md
+// §3.6.10 for the "known unfinished" list. Flipping it FALSE restores the stock battle
+// screen -- art, healthbox text positions, exp bar, ability pop-up, type icon
+// positions and the move-description frame all revert together, no other edit needed.
 
 // The map name pop-up has no toggle here on purpose: it is selected with
 // OW_POPUP_GENERATION == GEN_8 in include/config/overworld.h, which is already

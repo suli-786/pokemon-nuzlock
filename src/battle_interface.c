@@ -37,6 +37,17 @@
 
 #define HEALTHBOX_BG_INDEX 2
 
+// Y of the level / nickname text inside the healthbox sprite, and of the HP digits
+// relative to their row. The SwSh frame is a slanted parallelogram whose usable band is
+// one pixel higher on the shorter doubles boxes, so the text follows it up.
+#if SWSH_BATTLE_UI
+#define HEALTHBOX_TEXT_Y     (IsDoubleBattle() ? 2 : 3)
+#define HEALTHBOX_HP_TEXT_Y  4
+#else
+#define HEALTHBOX_TEXT_Y     3
+#define HEALTHBOX_HP_TEXT_Y  5
+#endif
+
 enum
 {   // Corresponds to gHealthboxElementsGfxTable (and the tables after it) in graphics.c
     // These are indexes into the tables, which are filled with 8x8 square pixel data.
@@ -538,22 +549,43 @@ static const struct SpriteTemplate sStatusSummaryBallsSpriteTemplates[2] =
 static const u8 sEmptyWhiteText_GrayHighlight[] = __("{COLOR WHITE}{BACKGROUND DARK_GRAY}{ACCENT DARK_GRAY}              ");
 static const u8 sEmptyWhiteText_TransparentHighlight[] = __("{COLOR WHITE}{BACKGROUND TRANSPARENT}{ACCENT TRANSPARENT}              ");
 
+#if SWSH_BATTLE_UI
+// Gender symbols get their own colour on the SwSh healthbox instead of inheriting the
+// nickname's. gText_HealthboxGender_Male/Female stay in use when SWSH_BATTLE_UI is off.
+static const u8 sText_GenderMale[] = _("{COLOR LIGHT_BLUE}♂");
+static const u8 sText_GenderFemale[] = _("{COLOR BLUE}♀");
+#endif
+
 enum
 {
     PAL_STATUS_PSN,
     PAL_STATUS_PAR,
     PAL_STATUS_SLP,
     PAL_STATUS_FRZ,
-    PAL_STATUS_BRN
+    PAL_STATUS_BRN,
+    // Frostbite borrowed PAL_STATUS_FRZ upstream, so FRZ and FRB were indistinguishable
+    // at a glance. Giving it its own entry is a real information gain, so it is taken
+    // unconditionally -- the FRB row below is used by both branches of the toggle.
+    PAL_STATUS_FRB,
 };
 
 static const u16 sStatusIconColors[] =
 {
+#if SWSH_BATTLE_UI
+    [PAL_STATUS_PSN] = RGB(26, 13, 31),
+    [PAL_STATUS_PAR] = RGB(31, 26, 0),
+    [PAL_STATUS_SLP] = RGB(17, 24, 31),
+    [PAL_STATUS_FRZ] = RGB(0, 31, 27),
+    [PAL_STATUS_BRN] = RGB(31, 16, 5),
+    [PAL_STATUS_FRB] = RGB(6, 21, 26),
+#else
     [PAL_STATUS_PSN] = RGB(24, 12, 24),
     [PAL_STATUS_PAR] = RGB(23, 23, 3),
     [PAL_STATUS_SLP] = RGB(20, 20, 17),
     [PAL_STATUS_FRZ] = RGB(17, 22, 28),
     [PAL_STATUS_BRN] = RGB(28, 14, 10),
+    [PAL_STATUS_FRB] = RGB(6, 21, 26),
+#endif
 };
 
 static const struct WindowTemplate sHealthboxWindowTemplate = {
@@ -569,7 +601,15 @@ static const struct WindowTemplate sHealthboxWindowTemplate = {
 static const union TextColor sHealthBoxTextColor =
 {
     .background = 0,
+#if SWSH_BATTLE_UI
+    // Healthbox palette index 6 (82,106,98) instead of 1 (65,65,65): softer slate text
+    // to match the redrawn frame. The palette itself is unchanged between old and new
+    // art, so this is purely a restyle. Upstream expressed it as `color[1] = 6` inside
+    // AddTextPrinterAndCreateWindowOnHealthboxWithFont(), which no longer exists.
+    .foreground = 6,
+#else
     .foreground = 1,
+#endif
     .shadow = 3,
     .accent = 0
 };
@@ -882,16 +922,17 @@ static void UpdateLvlInHealthbox(u8 healthboxSpriteId, u8 lvl)
     }
 
     u32 width = GetStringWidth(FONT_SMALL, text, 0);
+    u32 yPos = HEALTHBOX_TEXT_Y;
 
     if (IsOnPlayerSide(battler))
     {
-        FillSpriteRectColor(spriteId, 8, 5, 24, 11, HEALTHBOX_BG_INDEX);
-        AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, 32 - width, 3, 0, 0, sHealthBoxTextColor, 0, text);
+        FillSpriteRectColor(spriteId, 8, yPos + 2, 24, 16 - (yPos + 2), HEALTHBOX_BG_INDEX);
+        AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, 32 - width, yPos, 0, 0, sHealthBoxTextColor, 0, text);
     }
     else
     {
-        FillSpriteRectColor(spriteId, 0, 5, 24, 11, HEALTHBOX_BG_INDEX);
-        AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, 24 - width, 3, 0, 0, sHealthBoxTextColor, 0, text);
+        FillSpriteRectColor(spriteId, 0, yPos + 2, 24, 16 - (yPos + 2), HEALTHBOX_BG_INDEX);
+        AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, 24 - width, yPos, 0, 0, sHealthBoxTextColor, 0, text);
     }
 }
 
@@ -919,14 +960,15 @@ static void PrintHpOnHealthbox(u32 spriteId, s16 currHp, s16 maxHp, u32 bgColor,
     gSprites[spriteId].data[1] = spriteId2;
     gSprites[spriteId2].data[1] = SPRITE_NONE;
 
-    //  Clear out old text first
-    FillSpriteRectColor(spriteId, 40, yOffset + 8, 56, 8, bgColor);
+    //  Clear out old text first. The clear rect tracks HEALTHBOX_HP_TEXT_Y so raising the
+    //  digits does not leave the top row of the previous value behind.
+    FillSpriteRectColor(spriteId, 40, yOffset + HEALTHBOX_HP_TEXT_Y + 3, 56, 16 - (HEALTHBOX_HP_TEXT_Y + 3), bgColor);
 
     width = GetStringWidth(HP_FONT, text, -1) + GetFontAttribute(HP_FONT, FONTATTR_LETTER_SPACING);
     if (width < 32)
-        AddSpriteTextPrinterParameterized6(spriteId2, HP_FONT, 32 - width, yOffset + 5, 0, 0, sHealthBoxTextColor, 0, text);
+        AddSpriteTextPrinterParameterized6(spriteId2, HP_FONT, 32 - width, yOffset + HEALTHBOX_HP_TEXT_Y, 0, 0, sHealthBoxTextColor, 0, text);
     else
-        AddSpriteTextPrinterParameterized6(spriteId, HP_FONT, 64 - (width - 32), yOffset + 5, 0, 0, sHealthBoxTextColor, 0, text);
+        AddSpriteTextPrinterParameterized6(spriteId, HP_FONT, 64 - (width - 32), yOffset + HEALTHBOX_HP_TEXT_Y, 0, 0, sHealthBoxTextColor, 0, text);
 
     gSprites[spriteId].data[1] = savedValue1;
     gSprites[spriteId2].data[1] = savedValue2;
@@ -1203,6 +1245,14 @@ void SwapHpBarsWithHpText(void)
 #define tIsBattleStart          data[10]
 #define tBlend                  data[15]
 
+// Where the six party balls sit relative to the summary bar sprite. The SwSh bar art is
+// taller and the balls sit inside it rather than riding on its top edge.
+#if SWSH_BATTLE_UI
+#define PARTY_SUMMARY_BALL_Y_OFFSET  2
+#else
+#define PARTY_SUMMARY_BALL_Y_OFFSET -4
+#endif
+
 u8 CreatePartyStatusSummarySprites(enum BattlerId battler, struct HpAndStatus *partyInfo, bool8 skipPlayer, bool8 isBattleStart)
 {
     bool8 isOpponent;
@@ -1280,7 +1330,7 @@ u8 CreatePartyStatusSummarySprites(enum BattlerId battler, struct HpAndStatus *p
 
     for (i = 0; i < PARTY_SIZE; i++)
     {
-        ballIconSpritesIds[i] = CreateSpriteAtEnd(&sStatusSummaryBallsSpriteTemplates[isOpponent], bar_X, bar_Y - 4, 9);
+        ballIconSpritesIds[i] = CreateSpriteAtEnd(&sStatusSummaryBallsSpriteTemplates[isOpponent], bar_X, bar_Y + PARTY_SUMMARY_BALL_Y_OFFSET, 9);
 
         if (!isBattleStart)
             gSprites[ballIconSpritesIds[i]].callback = SpriteCB_StatusSummaryBalls_OnSwitchout;
@@ -1710,12 +1760,21 @@ void UpdateNickInHealthbox(u8 healthboxSpriteId, struct Pokemon *mon)
     default:
         StringCopy(ptr, gText_HealthboxGender_None);
         break;
+#if SWSH_BATTLE_UI
+    case MON_MALE:
+        StringCopy(ptr, sText_GenderMale);
+        break;
+    case MON_FEMALE:
+        StringCopy(ptr, sText_GenderFemale);
+        break;
+#else
     case MON_MALE:
         StringCopy(ptr, gText_HealthboxGender_Male);
         break;
     case MON_FEMALE:
         StringCopy(ptr, gText_HealthboxGender_Female);
         break;
+#endif
     }
 
     //  Don't assume that healthbox sprites don't have data in the fields used for sprite printing
@@ -1726,16 +1785,17 @@ void UpdateNickInHealthbox(u8 healthboxSpriteId, struct Pokemon *mon)
     gSprites[healthboxSpriteId2].data[1] = SPRITE_NONE;
 
     u32 fontId = GetFontIdToFit(gDisplayedStringBattle, FONT_SMALL, 0, 55);
+    u32 yPos = HEALTHBOX_TEXT_Y;
 
     if (IsOnPlayerSide(gSprites[healthboxSpriteId].data[6]))
     {
-        FillSpriteRectColor(healthboxSpriteId, 16, 5, 55, 11, HEALTHBOX_BG_INDEX);
-        AddSpriteTextPrinterParameterized6(healthboxSpriteId, fontId, 16, 3, 0, 0, sHealthBoxTextColor, 0, gDisplayedStringBattle);
+        FillSpriteRectColor(healthboxSpriteId, 16, yPos + 2, 55, 16 - (yPos + 2), HEALTHBOX_BG_INDEX);
+        AddSpriteTextPrinterParameterized6(healthboxSpriteId, fontId, 16, yPos, 0, 0, sHealthBoxTextColor, 0, gDisplayedStringBattle);
     }
     else
     {
-        FillSpriteRectColor(healthboxSpriteId, 8, 5, 55, 11, HEALTHBOX_BG_INDEX);
-        AddSpriteTextPrinterParameterized6(healthboxSpriteId, fontId, 8, 3, 0, 0, sHealthBoxTextColor, 0, gDisplayedStringBattle);
+        FillSpriteRectColor(healthboxSpriteId, 8, yPos + 2, 55, 16 - (yPos + 2), HEALTHBOX_BG_INDEX);
+        AddSpriteTextPrinterParameterized6(healthboxSpriteId, fontId, 8, yPos, 0, 0, sHealthBoxTextColor, 0, gDisplayedStringBattle);
     }
 
     gSprites[healthboxSpriteId].data[1] = savedValue1;
@@ -1821,7 +1881,7 @@ static void UpdateStatusIconInHealthbox(u8 healthboxSpriteId)
     else if (status & STATUS1_FROSTBITE)
     {
         statusGfxPtr = GetHealthboxElementGfxPtr(GetStatusIconForBattlerId(HEALTHBOX_GFX_STATUS_FRB_BATTLER0, battler));
-        statusPalId = PAL_STATUS_FRZ;
+        statusPalId = PAL_STATUS_FRB;
     }
     else if (status & STATUS1_PARALYSIS)
     {
@@ -2046,7 +2106,16 @@ void UpdateHealthboxAttribute(u8 healthboxSpriteId, struct Pokemon *mon, u8 elem
     }
 }
 
+// The SwSh healthbox draws a half-width exp bar tucked against the right edge of the
+// frame. B_EXPBAR_PIXELS is both the bar's length and the number of tiles it occupies,
+// so halving it also halves the tile run; MoveBattleBarGraphically() right-aligns that
+// run inside the original 8-tile slot.
+#if SWSH_BATTLE_UI
+#define B_EXPBAR_PIXELS 32
+#else
 #define B_EXPBAR_PIXELS 64
+#endif
+#define B_EXPBAR_TILES  (B_EXPBAR_PIXELS / 8)
 #define B_HEALTHBAR_PIXELS 48
 
 s32 MoveBattleBar(enum BattlerId battler, u8 healthboxSpriteId, u8 whichBar, u8 unused)
@@ -2160,17 +2229,20 @@ static void MoveBattleBarGraphically(enum BattlerId battler, u8 whichBar)
         level = GetMonData(GetBattlerMon(battler), MON_DATA_LEVEL);
         if (level >= MAX_LEVEL)
         {
-            for (i = 0; i < 8; i++)
+            for (i = 0; i < B_EXPBAR_TILES; i++)
                 array[i] = 0;
         }
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < B_EXPBAR_TILES; i++)
         {
-            if (i < 4)
+            // Right-align a shorter bar inside the original 8-tile slot. With the vanilla
+            // 8-tile bar the offset is 0 and this is the stock loop.
+            u32 tilePos = (8 - B_EXPBAR_TILES) + i;
+            if (tilePos < 4)
                 CpuCopy32(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_12) + array[i] * 32,
-                          (void *)(OBJ_VRAM0 + (gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum + 0x24 + i) * TILE_SIZE_4BPP), 32);
+                          (void *)(OBJ_VRAM0 + (gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum + 0x24 + tilePos) * TILE_SIZE_4BPP), 32);
             else
                 CpuCopy32(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_12) + array[i] * 32,
-                          (void *)(OBJ_VRAM0 + 0xB80 + (i + gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum) * TILE_SIZE_4BPP), 32);
+                          (void *)(OBJ_VRAM0 + 0xB80 + (tilePos + gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum) * TILE_SIZE_4BPP), 32);
         }
         break;
     }
@@ -2359,10 +2431,17 @@ static void FillHealthboxObject(void *dest, u32 valMult, u32 numTiles)
 #define ABILITY_POP_UP_WIN_WIDTH   10
 #define ABILITY_POP_UP_STR_WIDTH   (ABILITY_POP_UP_WIN_WIDTH * 8)
 
+#if SWSH_BATTLE_UI
+#define ABILITY_POP_UP_PLAYER_LEFT_WIN_W    5
+#define ABILITY_POP_UP_PLAYER_RIGHT_WIN_W   5
+#define ABILITY_POP_UP_OPPONENT_LEFT_WIN_W  6
+#define ABILITY_POP_UP_OPPONENT_RIGHT_WIN_W 4
+#else
 #define ABILITY_POP_UP_PLAYER_LEFT_WIN_W    6
 #define ABILITY_POP_UP_PLAYER_RIGHT_WIN_W   4
 #define ABILITY_POP_UP_OPPONENT_LEFT_WIN_W  7
 #define ABILITY_POP_UP_OPPONENT_RIGHT_WIN_W 3
+#endif
 
 #define ABILITY_POP_UP_WAIT_FRAMES 48
 
@@ -2371,6 +2450,19 @@ static void FillHealthboxObject(void *dest, u32 valMult, u32 numTiles)
  * FG = ForeGround
  * SH = SHadow
  */
+#if SWSH_BATTLE_UI
+// The battler name uses the same colours as the ability name on the SwSh pop-up, with a
+// light shadow (index 15) instead of black so it matches the nickname in the healthbox.
+// Index 15 of graphics/battle_interface/swsh/ability_pop_up.pal is the light tint that
+// exists only in the SwSh palette -- vanilla has 0,0,0 there.
+#define ABILITY_POP_UP_BATTLER_BG_TXTCLR 7
+#define ABILITY_POP_UP_BATTLER_FG_TXTCLR 9
+#define ABILITY_POP_UP_BATTLER_SH_TXTCLR 15
+
+#define ABILITY_POP_UP_ABILITY_BG_TXTCLR 7
+#define ABILITY_POP_UP_ABILITY_FG_TXTCLR 9
+#define ABILITY_POP_UP_ABILITY_SH_TXTCLR 15
+#else
 #define ABILITY_POP_UP_BATTLER_BG_TXTCLR 2
 #define ABILITY_POP_UP_BATTLER_FG_TXTCLR 7
 #define ABILITY_POP_UP_BATTLER_SH_TXTCLR 1
@@ -2378,6 +2470,7 @@ static void FillHealthboxObject(void *dest, u32 valMult, u32 numTiles)
 #define ABILITY_POP_UP_ABILITY_BG_TXTCLR 7
 #define ABILITY_POP_UP_ABILITY_FG_TXTCLR 9
 #define ABILITY_POP_UP_ABILITY_SH_TXTCLR 1
+#endif
 
 #define sState          data[0]
 #define sAutoDestroy    data[1]
@@ -2404,8 +2497,13 @@ enum
     TAG_LAST_BALL_WINDOW,
 };
 
+#if SWSH_BATTLE_UI
+static const u32 sAbilityPopUpGfx[] = INCGFX_U32("graphics/battle_interface/swsh/ability_pop_up.png", ".4bpp", "-mwidth 8 -mheight 4");
+static const u16 sAbilityPopUpPalette[] = INCGFX_U16("graphics/battle_interface/swsh/ability_pop_up.pal", ".gbapal");
+#else
 static const u32 sAbilityPopUpGfx[] = INCGFX_U32("graphics/battle_interface/ability_pop_up.png", ".4bpp", "-mwidth 8 -mheight 4");
 static const u16 sAbilityPopUpPalette[] = INCGFX_U16("graphics/battle_interface/ability_pop_up.pal", ".gbapal");
+#endif
 
 static const struct SpriteSheet sSpriteSheet_AbilityPopUp =
 {
@@ -2436,16 +2534,28 @@ static const struct SpriteTemplate sSpriteTemplate_AbilityPopUp =
 
 static const s16 sAbilityPopUpCoordsDoubles[MAX_BATTLERS_COUNT][2] =
 {
+#if SWSH_BATTLE_UI
+    { 16, 80}, // Player left  (SwSh pop-up is 8px wider on the left)
+    {178, 19}, // Opponent left
+    { 16, 97}, // Player right (SwSh pop-up is 8px wider on the left)
+    {178, 36}, // Opponent right
+#else
     { 24, 80}, // Player left
     {178, 19}, // Opponent left
     { 24, 97}, // Player right
     {178, 36}, // Opponent right
+#endif
 };
 
 static const s16 sAbilityPopUpCoordsSingles[MAX_BATTLERS_COUNT][2] =
 {
+#if SWSH_BATTLE_UI
+    { 16, 97}, // Player (SwSh pop-up is 8px wider on the left)
+    {178, 57}, // Opponent
+#else
     { 24, 97}, // Player
     {178, 57}, // Opponent
+#endif
 };
 
 static u8 *AddTextPrinterAndCreateWindowOnAbilityPopUp(const u8 *str, u32 x, u32 y, u32 bgColor, u32 fgColor, u32 shadowColor, u32 *windowId)
@@ -2496,7 +2606,12 @@ static void PrintOnAbilityPopUp(const u8 *str, u8 *spriteTileData1, u8 *spriteTi
     u8 *windowTileData = AddTextPrinterAndCreateWindowOnAbilityPopUp(str, x, y, bgColor, fgColor, shadowColor, &windowId);
     u32 size1 = ABILITY_POP_UP_OPPONENT_LEFT_WIN_W, size2 = ABILITY_POP_UP_OPPONENT_RIGHT_WIN_W;
 
+    // The SwSh pop-up frame has one more tile of border before the text starts.
+#if SWSH_BATTLE_UI
+    spriteTileData1 += TILE_OFFSET_4BPP(2);
+#else
     spriteTileData1 += TILE_OFFSET_4BPP(1);
+#endif
     if (IsOnPlayerSide(battler))
     {
         size1 = ABILITY_POP_UP_PLAYER_LEFT_WIN_W, size2 = ABILITY_POP_UP_PLAYER_RIGHT_WIN_W;
@@ -2792,24 +2907,44 @@ static const struct SpriteTemplate sSpriteTemplate_MoveInfoWindow =
     .callback = SpriteCB_MoveInfoWin
 };
 
-#if B_LAST_USED_BALL_BUTTON == R_BUTTON && B_LAST_USED_BALL_CYCLE == TRUE
-    static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_r_cycle.png", ".4bpp");
-#elif B_LAST_USED_BALL_CYCLE == TRUE
-    static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_l_cycle.png", ".4bpp");
-#elif B_LAST_USED_BALL_BUTTON == R_BUTTON
-    static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_r.png", ".4bpp");
+#if SWSH_BATTLE_UI
+    #if B_LAST_USED_BALL_BUTTON == R_BUTTON && B_LAST_USED_BALL_CYCLE == TRUE
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/last_used_ball_r_cycle.png", ".4bpp");
+    #elif B_LAST_USED_BALL_CYCLE == TRUE
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/last_used_ball_l_cycle.png", ".4bpp");
+    #elif B_LAST_USED_BALL_BUTTON == R_BUTTON
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/last_used_ball_r.png", ".4bpp");
+    #else
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/last_used_ball_l.png", ".4bpp");
+    #endif
 #else
-    static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_l.png", ".4bpp");
+    #if B_LAST_USED_BALL_BUTTON == R_BUTTON && B_LAST_USED_BALL_CYCLE == TRUE
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_r_cycle.png", ".4bpp");
+    #elif B_LAST_USED_BALL_CYCLE == TRUE
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_l_cycle.png", ".4bpp");
+    #elif B_LAST_USED_BALL_BUTTON == R_BUTTON
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_r.png", ".4bpp");
+    #else
+        static const u8 ALIGNED(4) sLastUsedBallWindowGfx[] = INCGFX_U8("graphics/battle_interface/last_used_ball_l.png", ".4bpp");
+    #endif
 #endif
 static const struct SpriteSheet sSpriteSheet_LastUsedBallWindow =
 {
     sLastUsedBallWindowGfx, sizeof(sLastUsedBallWindowGfx), TAG_LAST_BALL_WINDOW
 };
 
-#if B_MOVE_DESCRIPTION_BUTTON == R_BUTTON
-static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/move_info_window_r.png", ".4bpp");
+#if SWSH_BATTLE_UI
+    #if B_MOVE_DESCRIPTION_BUTTON == R_BUTTON
+    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/move_info_window_r.png", ".4bpp");
+    #else
+    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/move_info_window_l.png", ".4bpp");
+    #endif
 #else
-static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/move_info_window_l.png", ".4bpp");
+    #if B_MOVE_DESCRIPTION_BUTTON == R_BUTTON
+    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/move_info_window_r.png", ".4bpp");
+    #else
+    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/move_info_window_l.png", ".4bpp");
+    #endif
 #endif
 
 static const struct SpriteSheet sSpriteSheet_MoveInfoWindow =
@@ -2817,6 +2952,16 @@ static const struct SpriteSheet sSpriteSheet_MoveInfoWindow =
     sMoveInfoWindowGfx, sizeof(sMoveInfoWindowGfx), MOVE_INFO_WINDOW_TAG
 };
 
+#if SWSH_BATTLE_UI
+// The SwSh window art puts the ball further into the frame and 6px higher.
+#define LAST_USED_BALL_X_F    23
+#define LAST_USED_BALL_X_0    -7
+#define LAST_USED_BALL_Y      ((IsDoubleBattle()) ? 72 : 62)
+#define LAST_USED_BALL_Y_BNC  ((IsDoubleBattle()) ? 70 : 60)
+
+#define LAST_BALL_WIN_X_F       (LAST_USED_BALL_X_F - 7)
+#define LAST_BALL_WIN_X_0       (LAST_USED_BALL_X_0 - 7)
+#else
 #define LAST_USED_BALL_X_F    14
 #define LAST_USED_BALL_X_0    -14
 #define LAST_USED_BALL_Y      ((IsDoubleBattle()) ? 78 : 68)
@@ -2824,6 +2969,7 @@ static const struct SpriteSheet sSpriteSheet_MoveInfoWindow =
 
 #define LAST_BALL_WIN_X_F       (LAST_USED_BALL_X_F - 0)
 #define LAST_BALL_WIN_X_0       (LAST_USED_BALL_X_0 - 0)
+#endif
 #define LAST_USED_WIN_Y         (LAST_USED_BALL_Y - 8)
 
 #define sHide  data[0]
@@ -3170,8 +3316,65 @@ void ArrowsChangeColorLastBallCycle(bool32 showArrows)
 #endif
 }
 
+#if SWSH_BATTLE_UI
+// The battle move-info panel gets SwSh category icons while the summary screen, Pokédex
+// and move relearner keep the vanilla ones, so this needs its own sheet, palette and
+// template rather than reusing gSpriteTemplate_CategoryIcons. The upstream branch reused
+// that template by redeclaring TAG_CATEGORY_ICONS with pokemon_summary_screen.c's literal
+// 30004 -- correct today, silently broken the day anyone renumbers that tag. A tag in the
+// battle block (0xD6FF..0xD790) is both distinct and self-documenting.
+#define TAG_SWSH_CATEGORY_ICONS 0xD7A0
+
+static const u16 sSwShCategoryIcons_Pal[] = INCGFX_U16("graphics/battle_interface/swsh/category_icons.png", ".gbapal");
+static const u32 sSwShCategoryIcons_Gfx[] = INCGFX_U32("graphics/battle_interface/swsh/category_icons.png", ".4bpp.smol");
+
+static const struct CompressedSpriteSheet sSpriteSheet_SwShCategoryIcons =
+{
+    .data = sSwShCategoryIcons_Gfx,
+    .size = 16 * 16 * 3 / 2,
+    .tag = TAG_SWSH_CATEGORY_ICONS,
+};
+
+static const struct SpritePalette sSpritePal_SwShCategoryIcons =
+{
+    .data = sSwShCategoryIcons_Pal,
+    .tag = TAG_SWSH_CATEGORY_ICONS,
+};
+
+static const struct OamData sOamData_SwShCategoryIcons =
+{
+    .size = SPRITE_SIZE(16x16),
+    .shape = SPRITE_SHAPE(16x16),
+    .priority = 0,
+};
+
+static const union AnimCmd sSpriteAnim_SwShCategoryIcon0[] = { ANIMCMD_FRAME(0, 0), ANIMCMD_END };
+static const union AnimCmd sSpriteAnim_SwShCategoryIcon1[] = { ANIMCMD_FRAME(4, 0), ANIMCMD_END };
+static const union AnimCmd sSpriteAnim_SwShCategoryIcon2[] = { ANIMCMD_FRAME(8, 0), ANIMCMD_END };
+
+static const union AnimCmd *const sSpriteAnimTable_SwShCategoryIcons[] =
+{
+    sSpriteAnim_SwShCategoryIcon0,
+    sSpriteAnim_SwShCategoryIcon1,
+    sSpriteAnim_SwShCategoryIcon2,
+};
+
+const struct SpriteTemplate gSpriteTemplate_SwShCategoryIcons =
+{
+    .tileTag = TAG_SWSH_CATEGORY_ICONS,
+    .paletteTag = TAG_SWSH_CATEGORY_ICONS,
+    .oam = &sOamData_SwShCategoryIcons,
+    .anims = sSpriteAnimTable_SwShCategoryIcons,
+};
+#endif // SWSH_BATTLE_UI
+
 void CategoryIcons_LoadSpritesGfx(void)
 {
+#if SWSH_BATTLE_UI
+    LoadCompressedSpriteSheet(&sSpriteSheet_SwShCategoryIcons);
+    LoadSpritePalette(&sSpritePal_SwShCategoryIcons);
+#else
     LoadCompressedSpriteSheet(&gSpriteSheet_CategoryIcons);
     LoadSpritePalette(&gSpritePal_CategoryIcons);
+#endif
 }

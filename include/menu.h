@@ -21,7 +21,7 @@
 // DLG_WINDOW_BASE_TILE_NUM .. +24 instead of .. +13.
 //
 // !! Every LoadMessageBoxGfx() destOffset in the tree has to have MSG_BOX_TILE_COUNT
-// !! tiles of headroom. See docs/overhaul/UI_PORT_CHECKLIST.md §3.5 for the audit.
+// !! tiles of headroom. See docs/overhaul/UI_PORT_CHECKLIST.md §3.6 for the audit.
 #if SWSH_MESSAGE_BOX
 #define MSG_BOX_TILE_COUNT       25
 #define MSG_BOX_WINDOW_WIDTH     26
@@ -31,6 +31,19 @@
 #define MSG_BOX_WINDOW_WIDTH     27
 #define STD_WINDOW_BASE_TILE_NUM 0x214
 #endif
+
+// LoadStdWindowGfx()/DrawStdFrameWithCustomTileAndPalette() own a 3x3 frame, so the
+// standard window occupies STD_WINDOW_BASE_TILE_NUM .. +8.
+#define STD_WINDOW_TILE_COUNT    9
+
+// SWSH_BATTLE_UI's move-description frame (graphics/text_window/swsh/move_desc_box.png,
+// 80x8 = 10 tiles, tilemap 5x7) is loaded straight after the standard window frame.
+// Derived, NOT hardcoded: the upstream branch shipped a literal 0x21D, which was
+// STD_WINDOW_BASE_TILE_NUM + 9 against *vanilla's* 0x214. SWSH_MESSAGE_BOX moved that
+// base to 0x21A, so a literal 0x21D would have landed inside the standard window frame
+// and corrupted it. See docs/overhaul/UI_PORT_CHECKLIST.md §3.6 for the BG tile audit.
+#define SWSH_MOVE_DESC_TILE_COUNT           10
+#define SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM (STD_WINDOW_BASE_TILE_NUM + STD_WINDOW_TILE_COUNT)
 
 #define MENU_NOTHING_CHOSEN -2
 #define MENU_B_PRESSED -1
@@ -124,6 +137,10 @@ void ListMenuLoadStdPalAt(u8 palOffset, u8 palId);
 u8 Menu_MoveCursor(s8 cursorDelta);
 u8 Menu_MoveCursorNoWrapAround(s8 cursorDelta);
 void DrawStdWindowFrame(u8 windowId, bool8 copyToVram);
+#if SWSH_BATTLE_UI
+void DrawSwShMoveDescFrame(u8 windowId, bool8 copyToVram);
+void ClearSwShMoveDescWindowAndFrame(u8 windowId, bool8 copyToVram);
+#endif
 u8 AddStartMenuWindow(u8 numActions);
 u8 InitMenuNormal(u8 windowId, u8 fontId, u8 left, u8 top, u8 cursorHeight, u8 numChoices, u8 initialCursorPos);
 void LoadMessageBoxAndFrameGfx(u8 windowId, bool8 copyToVram);

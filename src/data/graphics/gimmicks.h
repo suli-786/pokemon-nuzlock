@@ -1,4 +1,20 @@
 // trigger data
+// The SwSh set is selected by SWSH_BATTLE_UI (include/config/swsh_ui.h). Note the branch
+// also shipped a mega_trigger.pal change; that file no longer exists upstream -- the
+// palette now comes out of mega_trigger.png, so swsh/mega_trigger.png carries it.
+#if SWSH_BATTLE_UI
+static const u8 ALIGNED(4) sMegaTriggerGfx[] = INCGFX_U8("graphics/battle_interface/swsh/mega_trigger.png", ".4bpp");
+static const u8 ALIGNED(4) sZMoveTriggerGfx[] = INCGFX_U8("graphics/battle_interface/swsh/z_move_trigger.png", ".4bpp");
+static const u8 ALIGNED(4) sBurstTriggerGfx[] = INCGFX_U8("graphics/battle_interface/swsh/burst_trigger.png", ".4bpp");
+static const u8 ALIGNED(4) sDynamaxTriggerGfx[] = INCGFX_U8("graphics/battle_interface/swsh/dynamax_trigger.png", ".4bpp");
+static const u8 ALIGNED(4) sTeraTriggerGfx[] = INCGFX_U8("graphics/battle_interface/swsh/tera_trigger.png", ".4bpp");
+
+static const u16 sMegaTriggerPal[] = INCGFX_U16("graphics/battle_interface/swsh/mega_trigger.png", ".gbapal");
+static const u16 sZMoveTriggerPal[] = INCGFX_U16("graphics/battle_interface/swsh/z_move_trigger.png", ".gbapal");
+static const u16 sBurstTriggerPal[] = INCGFX_U16("graphics/battle_interface/swsh/burst_trigger.png", ".gbapal");
+static const u16 sDynamaxTriggerPal[] = INCGFX_U16("graphics/battle_interface/swsh/dynamax_trigger.png", ".gbapal");
+static const u16 sTeraTriggerPal[] = INCGFX_U16("graphics/battle_interface/swsh/tera_trigger.png", ".gbapal");
+#else
 static const u8 ALIGNED(4) sMegaTriggerGfx[] = INCGFX_U8("graphics/battle_interface/mega_trigger.png", ".4bpp");
 static const u8 ALIGNED(4) sZMoveTriggerGfx[] = INCGFX_U8("graphics/battle_interface/z_move_trigger.png", ".4bpp");
 static const u8 ALIGNED(4) sBurstTriggerGfx[] = INCGFX_U8("graphics/battle_interface/burst_trigger.png", ".4bpp");
@@ -10,6 +26,7 @@ static const u16 sZMoveTriggerPal[] = INCGFX_U16("graphics/battle_interface/z_mo
 static const u16 sBurstTriggerPal[] = INCGFX_U16("graphics/battle_interface/burst_trigger.png", ".gbapal");
 static const u16 sDynamaxTriggerPal[] = INCGFX_U16("graphics/battle_interface/dynamax_trigger.png", ".gbapal");
 static const u16 sTeraTriggerPal[] = INCGFX_U16("graphics/battle_interface/tera_trigger.png", ".gbapal");
+#endif
 
 static const struct SpriteSheet sSpriteSheet_MegaTrigger = {sMegaTriggerGfx, sizeof(sMegaTriggerGfx), TAG_GIMMICK_TRIGGER_TILE};
 static const struct SpriteSheet sSpriteSheet_ZMoveTrigger = {sZMoveTriggerGfx, sizeof(sZMoveTriggerGfx), TAG_GIMMICK_TRIGGER_TILE};
@@ -69,10 +86,18 @@ static const struct SpriteTemplate sSpriteTemplate_GimmickTrigger =
 };
 
 // indicator data
+#if SWSH_BATTLE_UI
+static const u8 ALIGNED(4) sMegaIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/swsh/mega_indicator.png", ".4bpp");
+#else
 static const u8 ALIGNED(4) sMegaIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/mega_indicator.png", ".4bpp");
+#endif
 static const u8 ALIGNED(4) sAlphaIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/alpha_indicator.png", ".4bpp");
 static const u8 ALIGNED(4) sOmegaIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/omega_indicator.png", ".4bpp");
+#if SWSH_BATTLE_UI
+static const u8 ALIGNED(4) sDynamaxIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/swsh/dynamax_indicator.png", ".4bpp");
+#else
 static const u8 ALIGNED(4) sDynamaxIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/dynamax_indicator.png", ".4bpp");
+#endif
 static const u8 ALIGNED(4) sNormalIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/normal_indicator.png", ".4bpp");
 static const u8 ALIGNED(4) sFightingIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/fighting_indicator.png", ".4bpp");
 static const u8 ALIGNED(4) sFlyingIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/flying_indicator.png", ".4bpp");
@@ -94,7 +119,11 @@ static const u8 ALIGNED(4) sFairyIndicatorGfx[] = INCGFX_U8("graphics/battle_int
 static const u8 ALIGNED(4) sStellarIndicatorGfx[] = INCGFX_U8("graphics/battle_interface/stellar_indicator.png", ".4bpp");
 
 static const u16 sMiscIndicatorPal[] = INCGFX_U16("graphics/battle_interface/misc_indicator.pal", ".gbapal"); // has room for more colors
+#if SWSH_BATTLE_UI
+static const u16 sMegaIndicatorPal[] = INCGFX_U16("graphics/battle_interface/swsh/mega_indicator.png", ".gbapal");
+#else
 static const u16 sMegaIndicatorPal[] = INCGFX_U16("graphics/battle_interface/mega_indicator.png", ".gbapal");
+#endif
 static const u16 sTeraIndicatorPal[] = INCGFX_U16("graphics/battle_interface/tera_indicator.pal", ".gbapal");
 
 static const u8 *const sTeraIndicatorDataPtrs[] =

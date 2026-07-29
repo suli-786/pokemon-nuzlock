@@ -8,6 +8,11 @@
 #include "menu.h"
 
 static const u16 sStdTextWindow_Gfx[]  = INCGFX_U16("graphics/text_window/std.png", ".4bpp");
+#if SWSH_BATTLE_UI
+// 80x8 = SWSH_MOVE_DESC_TILE_COUNT tiles. The upstream branch loaded 0x180 bytes here
+// (12 tiles), reading two tiles past the end of the asset into whatever .rodata follows.
+static const u8 sSwShMoveDescBox_Gfx[] = INCGFX_U8("graphics/text_window/swsh/move_desc_box.png", ".4bpp");
+#endif
 
 const u8 gTextWindowFrame1_Gfx[] = INCGFX_U8("graphics/text_window/1.png", ".4bpp");
 static const u8 sTextWindowFrame2_Gfx[] = INCGFX_U8("graphics/text_window/2.png", ".4bpp");
@@ -113,6 +118,14 @@ void LoadStdWindowGfx(u8 windowId, u16 destOffset, u8 palOffset)
     LoadBgTiles(GetWindowAttribute(windowId, WINDOW_BG), sStdTextWindow_Gfx, 0x120, destOffset);
     LoadPalette(GetTextWindowPalette(3), palOffset, PLTT_SIZE_4BPP);
 }
+
+#if SWSH_BATTLE_UI
+void LoadSwShMoveDescBoxGfx(u8 windowId, u16 destOffset, u8 palOffset)
+{
+    LoadBgTiles(GetWindowAttribute(windowId, WINDOW_BG), sSwShMoveDescBox_Gfx, TILE_OFFSET_4BPP(SWSH_MOVE_DESC_TILE_COUNT), destOffset);
+    LoadPalette(gStandardMenuPalette, palOffset, STD_WINDOW_PALETTE_SIZE);
+}
+#endif
 
 void LoadSignBoxGfx(u8 windowId, u16 destOffset, u8 palOffset)
 {

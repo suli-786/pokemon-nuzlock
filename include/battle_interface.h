@@ -2,6 +2,7 @@
 #define GUARD_BATTLE_INTERFACE_H
 
 #include "battle_controllers.h"
+#include "config/swsh_ui.h"
 
 // used for sBattlerCoords and sBattlerHealthboxCoords
 enum BattleCoordTypes
@@ -136,6 +137,9 @@ void SwapBallToDisplay(bool32 sameBall);
 void ArrowsChangeColorLastBallCycle(bool32 showArrows);
 void UpdateAbilityPopup(enum BattlerId battlerId);
 void CategoryIcons_LoadSpritesGfx(void);
+#if SWSH_BATTLE_UI
+extern const struct SpriteTemplate gSpriteTemplate_SwShCategoryIcons;
+#endif
 void TryToAddMoveInfoWindow(void);
 void TryToHideMoveInfoWindow(void);
 void TryAddPokeballIconToHealthbox(u8 healthboxSpriteId, bool8 noStatus);

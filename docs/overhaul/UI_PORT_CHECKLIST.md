@@ -622,6 +622,280 @@ PNG behind). Dropped, same call as §3.2's `latin_frlg_nums` fonts. The other 18
 
 ---
 
+### 3.6 `dev_battle_ui` — landed **unfinished, on purpose**
+
+**Read this first.** Unlike §3.1–§3.5 this port was **not** finished before it landed. The owner's
+call was "land it, then fix it", so the section closes with an explicit *known unfinished* list
+instead of a clean bill of health. Everything here is reversible in one line:
+`SWSH_BATTLE_UI = FALSE` in `include/config/swsh_ui.h`. That was verified, not assumed — the FALSE
+build compiles and links clean at **26 566 568 B / 79.17% ROM, the pre-port figure**, while TRUE
+costs 728 B (79.18%). EWRAM and IWRAM are unchanged either way (89.07% / 86.57%).
+
+**Ref.** `refs/ports/dev_battle_ui` = `b2106afda6`. Base is expansion **1.14.1+8** (the branch's own
+version header claims 1.14.2); our tree is **1.16.3-dev**, twelve tagged releases later. `patch
+--dry-run` of the branch diff rejected **14 of 37 hunks (38%)** and fuzzed 5 more, so nothing was
+applied mechanically — every hunk below was hand-placed or rewritten.
+
+**Scope.** 49 files, +192/−78. No new `.c`/`.h`. The branch touches 41 assets: 38 replacements plus
+3 new. We took **37 of the 38** — `mega_trigger.pal` was dropped because upstream deleted that file
+(the palette now comes out of `mega_trigger.png`) — and all 3 new ones.
+
+**Master toggle:** `SWSH_BATTLE_UI` in `include/config/swsh_ui.h`, per §1. There is no
+`include/swsh_battle_ui.h` — the branch has no tuning block of its own, its knobs are ordinary
+`#define`s inside `src/battle_interface.c` and `include/menu.h`, and they stayed there.
+
+#### 3.6.1 Assets: copied, never overwritten
+
+The branch **replaces** 38 files in `graphics/battle_interface/` in place. Doing that would have made
+the toggle a one-way door, so every replacement was copied to
+**`graphics/battle_interface/swsh/`** instead and selected at the `INCBIN`/`INCGFX` site. Same
+pattern the message-box port used for `graphics/text_window/swsh/`.
+
+| Selected in | Assets |
+|---|---|
+| `src/graphics.c` | `textbox.png` + `textbox_0.pal` + `textbox_map.bin`; the 12 changed entries of `gHealthboxElementsGfxTable` (`misc.4bpp` is the one the branch left alone and keeps the vanilla path); `ball_status_bar`, `ball_display`; the 5 `gHealthbox*Gfx` |
+| `src/battle_interface.c` | `ability_pop_up.png` + `.pal`, the 4 `last_used_ball_*`, both `move_info_window_*`, new `swsh/category_icons.png` |
+| `src/data/graphics/gimmicks.h` | the 5 `*_trigger.png`, `mega_indicator.png`, `dynamax_indicator.png` |
+
+Every replacement PNG is **dimension-identical** to ours and differs only in colormap depth (8-bit vs
+4-bit indexed), which `gbagfx` normalises. The healthbox palettes are byte-identical between old and
+new art — the SwSh frames are a redraw inside the existing 16 colours, not a recolour.
+
+One new build rule in `graphics_file_rules.mk`: `swsh/textbox.gbapal` is a `cat` of
+`swsh/textbox_0.gbapal` + the **vanilla** `textbox_1.gbapal`, because the branch only restyled the
+first of the two concatenated palettes.
+
+#### 3.6.2 The four dead healthbox hunks — reimplemented, not ported
+
+The branch was written against `AddTextPrinterAndCreateWindowOnHealthbox(str, x, y, bgColor, &winId)`,
+which upstream **deleted**. Our tree blits into the sprite directly:
+`FillSpriteRectColor(spriteId, …)` + `AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, x, y,
+…, sHealthBoxTextColor, …)`. These four are rewrites carrying the branch's *intent*:
+
+| Branch hunk | Reimplemented as |
+|---|---|
+| `UpdateLvlInHealthbox`: y `3` → `IsDoubleBattle() ? 2 : 3` | `HEALTHBOX_TEXT_Y` macro (`src/battle_interface.c`), used at the `AddSpriteTextPrinterParameterized6` call |
+| `PrintHpOnHealthbox` ×2: y `5` → `4` | `HEALTHBOX_HP_TEXT_Y` macro, applied to both the digit print and the `yOffset + 8` clear rect |
+| `UpdateNickInHealthbox`: y `3` → `IsDoubleBattle() ? 2 : 3` | same `HEALTHBOX_TEXT_Y` |
+| `color[1] = 1` → `6` | `sHealthBoxTextColor.foreground` |
+
+**The clear rects had to move too, and the branch never did this.** Under the old API each print
+allocated a scratch window, so raising the text raised its own background automatically. With sprite
+blitting the clear rect is a separate hardcoded rectangle: leave it at `y = 5` while printing at
+`y = 2` and the top row of the *previous* value survives. Both `FillSpriteRectColor` calls are now
+expressed as `top = yPos + 2, height = 16 - (yPos + 2)` so they follow the text. At the vanilla
+`yPos = 3` this is bit-identical to the stock `(…, 5, …, 11, …)`.
+
+On `color[1] = 6`: taken, and it does make sense. Healthbox palette index 6 is `(82,106,98)`, a
+slate that reads cleanly on the index-2 cream background; index 1 is near-black `(65,65,65)`. The
+palette is identical between the two arts, so this is a pure restyle with no contrast risk. It also
+explains the branch's `ability_pop_up.pal` note — it added a light tint at index 15 specifically so
+the pop-up's shadow could "match name in healthbox".
+
+#### 3.6.3 BG tile audit — the silent-VRAM-corruption fix
+
+The branch hardcodes `#define SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM 0x21D`, i.e. vanilla
+`STD_WINDOW_BASE_TILE_NUM 0x214` + 9. **Our `STD_WINDOW_BASE_TILE_NUM` is `0x21A`** (§ the
+`SWSH_MESSAGE_BOX` port grew `MSG_BOX_TILE_COUNT` from 14 to 25). Taking `0x21D` literally would
+have dropped the move-description frame **inside** the standard window frame — three tiles of
+overlap, no warning, corrupt borders in whatever drew next. The branch author half-noticed: his own
+trailing comment reads `// 0x223 for future reference`.
+
+Fixed by **deriving** rather than hardcoding, in `include/menu.h`:
+
+```
+#define STD_WINDOW_TILE_COUNT               9
+#define SWSH_MOVE_DESC_TILE_COUNT           10
+#define SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM (STD_WINDOW_BASE_TILE_NUM + STD_WINDOW_TILE_COUNT)
+```
+
+which evaluates to `0x223` today and follows `STD_WINDOW_BASE_TILE_NUM` automatically if
+`SWSH_MESSAGE_BOX` is ever flipped.
+
+**The audit.** Battle BG0 is the only BG that sees this tile. From `sStandardBattleWindowTemplates`
+(`src/battle_bg.c`), the window `baseBlock` runs are:
+
+| Range | Owner |
+|---|---|
+| `0x020`–`0x0F7` | VS windows, `B_WIN_MSG` |
+| `0x100`–`0x191` | level-up box, level-up banner |
+| `0x190`–`0x1F7` | action menu, action prompt |
+| **`0x1F8`–`0x28F`** | **free — this is the frame arena** |
+| `0x290`–`0x2CF` | PP, PP remaining, move type, switch prompt |
+| `0x300`–`0x34F` | the four move-name windows |
+| `0x350`–`0x3BB` | `B_WIN_MOVE_DESCRIPTION` body (18×6) |
+
+Inside the arena: message box `0x200`–`0x218` (25 tiles), standard window `0x21A`–`0x222` (9),
+**move-desc frame `0x223`–`0x22C` (10)**. Next occupied tile is `0x290`. Headroom after the new
+frame: **99 tiles**. No collision.
+
+Note **10**, not 12. `LoadSwShMoveDescBoxGfx` upstream loads `0x180` bytes = 12 tiles, but
+`move_desc_box.png` is 80×8 = **10 tiles** and its tilemap references indices 0–9 only. The upstream
+call read 64 bytes of whatever `.rodata` followed the asset and wrote it into VRAM as two junk tiles.
+Fixed to `TILE_OFFSET_4BPP(SWSH_MOVE_DESC_TILE_COUNT)`.
+
+#### 3.6.4 Type icons vs the redrawn healthbox — analysed, one slot corrected
+
+Our tree runs `B_SHOW_TYPES = SHOW_TYPES_ALWAYS`. The branch author shipped `SHOW_TYPES_NEVER` and
+**never saw his layout with type icons on**, so this had to be derived rather than trusted.
+
+Method — all static, no emulator:
+
+- Type icons are 8×16 sprites at `sTypeIconPositions[position][isDoubles]` (`src/type_icons.c`),
+  created with `CreateSpriteAtEnd(…, UCHAR_MAX)` → **subpriority 255**, versus the healthbox's
+  subpriority 1 at the same OAM priority. **Type icons render behind the healthbox**, so overlap
+  means *hidden*, not *garbled*.
+- They also **slide** ±10px from the table value before resting (`GetTypeIconSlideMovement`), and the
+  second type sits `+11px` below the first (`SetTypeIconXY`). Both were included.
+- Healthbox sprite origins come from `sBattlerHealthboxCoords`; the player-singles box is forced to
+  `ST_OAM_SQUARE` with size 3 = 64×64, the rest are 64×32, and the right half is pinned at `x + 64`
+  (`SpriteCB_HealthBoxOther`). That maps the whole 128px-wide PNG onto a known screen rectangle, so
+  the icon rectangles can be expressed in **image pixel coordinates** and compared against the actual
+  non-transparent span of each row of the art.
+
+Result (px of the 8px-wide icon covered by opaque frame):
+
+| Slot | vanilla art | SwSh art | verdict |
+|---|---|---|---|
+| singles player left | 3px, rows 22–33 | 3px on the top row only, then 2/1/0 | **better** |
+| singles opponent left | 1px | 0–2px | same |
+| doubles player left / right | up to 8px on the lower icon | up to 3px | **better** |
+| doubles opponent left / right | 2px on the upper icon | **6px** on the upper icon | **regression** |
+
+The SwSh frame is a right-leaning parallelogram: its widest row is at the *top*, exactly where the
+first type icon sits on the opponent's doubles box. Widest opaque column there is image column 96;
+the icons start at column 91. So `sTypeIconPositions` gains a `+6` on the two doubles-opponent rows
+only, behind `SWSH_OPPONENT_DOUBLES_TYPE_ICON_X_SHIFT`, which is `0` when `SWSH_BATTLE_UI` is off.
+The other four slots are the same or better than vanilla and were left untouched — moving them would
+be a regression against a layout the owner already reads fine.
+
+**Confidence: high.** The geometry is fully determined by constants, and the one loose end was
+closed by measuring the icon sheets: every glyph in `graphics/types/battle_icons1.png` and
+`battle_icons2.png` fills its 8×16 cell edge to edge (x-extent 0–7 for all 20), so "6px covered"
+means 6 of 6 visible pixels, not 6 of a padded 8. `ShouldFlipTypeIcon` only hflips, which does not
+change the bounding box. The remaining unknown is `GetTypeIconBounceMovement`, which adds the
+healthbox's `y2` during switch-in — a transient vertical wobble that does not change the ordering of
+the table. **Playtest item #1 is still a doubles battle with a two-type opponent on the left.**
+
+#### 3.6.5 Deliberately not taken
+
+| Hunk | Why |
+|---|---|
+| `include/config/battle.h` (`B_LAST_USED_BALL_BUTTON` R→L, `B_FLAG_DYNAMAX_BATTLE`, `B_FLAG_TERA_ORB_NO_COST`) | the author's personal config. Ours is deliberate. |
+| `include/constants/flags.h` (`FLAG_UNUSED_0x264/0x265` → `FLAG_DYNAMAX_ENABLED`/`FLAG_FREE_TERA`) | those two ids are **already claimed** by `FLAG_OVERHAUL_NO_WILD_ENCOUNTERS` / `FLAG_OVERHAUL_NO_TRAINER_SEE` in REGISTRY.md §1. Direct collision. |
+| `src/battle_gimmick.c` trigger positions | branch moves `SINGLES_GIMMICK_TRIGGER_POS_Y_DIFF` −11 → −10 and X 30/31 → 35/36. Upstream re-tuned these after 1.14.2; ours are −5 / −2. The deltas are meaningless against our baseline, so nothing was applied. **This is a real open item** — the gimmick trigger has not been re-positioned for the new art at all. |
+| `graphics/battle_interface/mega_trigger.pal` | file deleted upstream. The palette now comes from `mega_trigger.png`, and `swsh/mega_trigger.png` carries it. |
+| the three `battle_controller_player.c` comment-outs | see §3.6.6. |
+| `TAG_CATEGORY_ICONS 30004` | see §3.6.7. |
+
+#### 3.6.6 The action prompt was kept
+
+Branch commit `62d1ff284a` "DIsable action prompt texts due to updated battle text box frame"
+comments out `BattleStringExpandPlaceholdersToDisplayedString(gText_WhatWillPkmnDo)` and **both**
+`BattlePutTextOnWindow(…, B_WIN_ACTION_PROMPT)` calls. That deletes "What will X do?" *and* the
+`B_SHOW_PARTNER_TARGET` doubles prompt, which is live gameplay information. **Not taken** — all three
+calls are intact.
+
+The author's stated reason is that the new textbox frame conflicts with the prompt, and he may be
+right: `swsh/textbox_0.pal` restyles palette 0 (index 5 white → `38,35,35`, index 15
+`106,164,164` → `54,53,52`) and `B_WIN_ACTION_PROMPT` draws in palette 0. **If the prompt turns out
+to be unreadable or clipped against the new frame, the fix is the frame or the text colour, not
+deleting the string.** Playtest item #2.
+
+#### 3.6.7 Category icon tag
+
+The branch defines `#define TAG_CATEGORY_ICONS 30004` in `src/battle_interface.c` and then creates
+the sprite from `gSpriteTemplate_CategoryIcons`, which lives in `src/pokemon_summary_screen.c` and
+hardcodes the same literal. It works today purely because the two literals match; renaming the
+summary screen's tag would silently feed the battle sprite garbage tiles. It is also the same value
+as `TAG_SHINY_ICON` in `src/swsh_summary_screen.c:841` (no runtime clash — different screens — but
+still a coincidence waiting to bite).
+
+Note the requested "just pick a distinct tag" **cannot** be done on its own: any other value needs a
+matching template, because the tag is what binds sprite to sheet. So the port adds a self-contained
+`gSpriteTemplate_SwShCategoryIcons` + sheet + palette + 3-frame anim table at
+`TAG_SWSH_CATEGORY_ICONS 0xD7A0`, inside the battle tag block (`0xD6FF`–`0xD790`), and
+`battle_controller_player.c` picks the template by toggle. ~20 lines, removes the cross-file
+coupling, and the summary screen / Pokédex / move relearner keep the vanilla icons either way.
+
+#### 3.6.8 Taken as-is (the genuinely good bits)
+
+- **`PAL_STATUS_FRB`** — frostbite had been borrowing `PAL_STATUS_FRZ`'s colour, so FRZ and FRB were
+  indistinguishable at a glance. Real information gain; the enum row is added **unconditionally** and
+  both toggle paths give it a distinct colour.
+- Gender symbols in their own colours on the healthbox.
+- Exp bar halved and right-aligned (`B_EXPBAR_PIXELS 64 → 32`, `MoveBattleBarGraphically`
+  right-aligns the shorter tile run inside the original 8-tile slot).
+- Ability pop-up window widths, coordinates, text colours and the extra tile of left border.
+- Last-used-ball / last-ball-window coordinates.
+- Party summary balls +6px down (`bar_Y − 4` → `bar_Y + 2`, expressed here as
+  `PARTY_SUMMARY_BALL_Y_OFFSET`). Upstream's own comment on that hunk says "down 3 pixels", which
+  does not match its own code; the code is what was ported.
+- Move-description panel: SwSh frame, two-tone body fill, `{COLOR_HIGHLIGHT_SHADOW 14 5 13}` on the
+  CAT/PWR/ACC line, `B_WIN_COPYTOVRAM`, category icon at (39, 63).
+- The branch's `acc_start` `0x6D` → `0x6C` hunk was a no-op: upstream already moved that literal to
+  the equivalent `{CLEAR_TO 108}`.
+
+#### 3.6.9 Gates
+
+| Gate | Result |
+|---|---|
+| `make` with `SWSH_BATTLE_UI = TRUE` | clean. EWRAM 89.07%, IWRAM 86.57%, ROM 79.18% (26 567 296 B) |
+| `make` with `SWSH_BATTLE_UI = FALSE` | clean. EWRAM 89.07%, IWRAM 86.57%, ROM 79.17% (26 566 568 B) — the pre-port figure |
+| `make check TESTS="SaveBlock"` | 3/3 PASS |
+| `make check TESTS="Cap Candy"` | 1/1 PASS |
+| `make check TESTS="Endless Candy"` | 1/1 PASS |
+| `make check TESTS="Nuzlocke blocks"` | 1/1 PASS |
+| `make check TESTS="Full multi"` | 2 PASS + 1 KNOWN_FAILING, as expected |
+| `make check TESTS="Battle"` | 23 PASS + 1 TO_DO, 0 FAIL |
+| `make check` (full sweep) | **5507 tests: 4871 PASS, 15 FAIL, 14 KNOWN_FAILING, 7 EXPECT_FAILING, 3 ASSUMPTION_FAIL, 597 TO_DO.** All 15 FAILs pre-existing — see below |
+
+**On the full sweep.** `test/battle/front_anim.c:5` ("Front anims work") **wedges the runner** — it
+TIMEOUTs on an in-ROM `src/malloc.c:97` `block->magic == MALLOC_SYSTEM_ID` assertion and the hydra
+retries it while climbing past 4 GB RSS, so nothing after it ever reports. This is pre-existing and
+was flagged before the port started; the sweep was completed with that one file moved aside and
+restored afterwards.
+
+The only red `FAIL`s in the sweep are **15 pre-existing, data-driven trainer tests** — the
+`Trainer Party Pool` group, the eight `Difficulty changes which party is used…` cases, and
+`CreateNPCTrainerPartyForTrainer generates customized Pokémon`. They assert on fixed trainer ids:
+`trainer_control.c:28` expects trainer **3** to be a Wobbuffet with a Master Ball, Telepathy and
+friendship 42, but trainer 3 in this tree is `TRAINER_GRUNT_AQUA_HIDEOUT_2` — the overhaul's own
+`f4d2428f9a` ("Overhaul Phases 0+1") rewrote `src/data/trainers.party`. Nothing in this port touches
+trainer data, party generation or the difficulty system. Everything else is PASS / TO_DO /
+EXPECT_FAILING (harness self-tests) / the 14 long-standing KNOWN_FAILINGs / three ASSUMPTION_FAILs
+(`test/text.c:566` "Map names fit in popup", `test/battle/exp.c:106` and `:168`).
+
+**No new failure was introduced.** Independently of the sweep: `grep -rl` over `test/` finds **zero**
+references to any symbol this port changes (`B_EXPBAR_PIXELS`, `sTypeIconPositions`, `HEALTHBOX_*`,
+`PAL_STATUS_*`, `SWSH_MOVE_DESC_*`, `CategoryIcons`, `SWSH_BATTLE_UI`), and the test runner is
+headless, so the port's surface is invisible to the harness by construction. **That cuts both ways:
+`make check` can never catch a regression in this port. Only playtesting can.**
+
+#### 3.6.10 Known unfinished — iterate here
+
+Ordered by how likely they are to actually bother you:
+
+1. **Doubles opponent type icons** — the `+6` shift above is derived, not seen. First thing to look
+   at in a real doubles battle.
+2. **The action prompt vs the new textbox frame** (§3.6.6). If "What will X do?" looks wrong, fix the
+   art or the palette; do not delete the call.
+3. **Gimmick trigger position was never ported** (§3.6.5). Mega/Tera/Dynamax trigger sits at our
+   1.16.3 coordinates on top of a 1.14-era redesign. Almost certainly needs a nudge.
+4. **Safari healthbox** — `healthbox_safari.png` was replaced, but `CreateSafariPlayerHealthboxSprites`
+   / `UpdateSafariBallsTextOnHealthbox` (`src/battle_interface.c`) still print at hardcoded `y = 3`
+   and `y = 19` and were never re-tuned for it. Safari Zone only.
+5. **Move-description frame vs `B_MOVE_DESCRIPTION_BUTTON`** — `WindowFunc_DrawSwShMoveDescFrame`
+   assumes `B_WIN_MOVE_DESCRIPTION`'s exact 18×6 geometry (`tilemapLeft − 1` … `+ width + 3`). Any
+   change to that window template needs the frame function revisited.
+6. **`B_SHOW_EFFECTIVENESS = SHOW_EFFECTIVENESS_ALWAYS`** replaces the PP string with the
+   effectiveness indicator in `B_WIN_PP`. That window is unchanged by this port and was not visually
+   checked against the new frame.
+7. The exp bar right-align was verified by reading the tile arithmetic (tiles 4–7 of the original
+   8-tile run, i.e. image x 64–95), not by eye.
+
+---
+
 ## 4. Pending branches — pre-merge drill
 
 For **storage**: DONE, see §3.3.
@@ -634,7 +908,13 @@ For **bag**: DONE, see §3.5. Rows 12–13 are protected by *routing*, not by a 
 are. The unguarded in-bag copies at `src/swsh_item_menu.c` L7046 / L7062 are dead code today and are
 the first thing to fix if that flag is ever flipped back on.
 
-**All five SwSh branches are now landed.** There is no pending SwSh UI port.
+For **battle UI**: LANDED BUT UNFINISHED, see §3.6 — and §3.6.10 in particular. This is the only
+ported branch that is not "done"; treat `SWSH_BATTLE_UI` as work in progress, not as settled art.
+Nuzlocke exposure is nil (the port touches no gate, no save field and no item path), but it does
+touch two things the owner reads every turn: the always-on type icons (§3.6.4) and the
+"What will X do?" prompt (§3.6.6).
+
+**All six SwSh branches are now landed.** There is no pending SwSh UI port.
 
 For **all**: re-read §2.4. Anything touching `struct BoxPokemon` or `enum MonData` is a
 save-format change — run `make check TESTS="SaveBlock"` and expect 3/3.

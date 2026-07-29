@@ -57,6 +57,10 @@ static inline void *GetWindowFunc_DialogueFrame(void);
 static void WindowFunc_DrawDialogueFrame(u8, u8, u8, u8, u8, u8);
 static void WindowFunc_ClearStdWindowAndFrame(u8, u8, u8, u8, u8, u8);
 static void WindowFunc_ClearDialogWindowAndFrame(u8, u8, u8, u8, u8, u8);
+#if SWSH_BATTLE_UI
+static void WindowFunc_DrawSwShMoveDescFrame(u8, u8, u8, u8, u8, u8);
+static void WindowFunc_ClearSwShMoveDescWindowAndFrame(u8, u8, u8, u8, u8, u8);
+#endif
 static void WindowFunc_ClearDialogWindowAndFrameNullPalette(u8, u8, u8, u8, u8, u8);
 static void WindowFunc_ClearStdWindowAndFrameToTransparent(u8, u8, u8, u8, u8, u8);
 static void task_free_buf_after_copying_tile_data_to_vram(u8 taskId);
@@ -85,6 +89,15 @@ static const u8 sMessageBoxTilemap[] = INCBIN_U8("graphics/text_window/swsh/mess
 #define MSG_BOX_TILEMAP_HEIGHT 6
 #else
 const u16 gStandardMenuPalette[] = INCGFX_U16("graphics/interface/std_menu.pal", ".gbapal");
+#endif
+
+#if SWSH_BATTLE_UI
+// 5x7 tilemap over graphics/text_window/swsh/move_desc_box.png: column 0 is the left
+// edge, column 1 the repeated middle, columns 2-4 the right edge (the SwSh frame's
+// right side is a wide slanted cap, hence 3 columns instead of 1).
+static const u8 sSwShMoveDescBoxTilemap[] = INCBIN_U8("graphics/text_window/swsh/move_desc_box.bin");
+#define SWSH_MOVE_DESC_TILEMAP_WIDTH  5
+#define SWSH_MOVE_DESC_TILEMAP_HEIGHT 7
 #endif
 
 static const struct WindowTemplate sStandardTextBox_WindowTemplates[] =
@@ -316,6 +329,26 @@ void DrawStdWindowFrame(u8 windowId, bool8 copyToVram)
         CopyWindowToVram(windowId, COPYWIN_FULL);
 }
 
+#if SWSH_BATTLE_UI
+void DrawSwShMoveDescFrame(u8 windowId, bool8 copyToVram)
+{
+    CallWindowFunction(windowId, WindowFunc_DrawSwShMoveDescFrame);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
+    PutWindowTilemap(windowId);
+    if (copyToVram == TRUE)
+        CopyWindowToVram(windowId, COPYWIN_FULL);
+}
+
+void ClearSwShMoveDescWindowAndFrame(u8 windowId, bool8 copyToVram)
+{
+    CallWindowFunction(windowId, WindowFunc_ClearSwShMoveDescWindowAndFrame);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
+    ClearWindowTilemap(windowId);
+    if (copyToVram == TRUE)
+        CopyWindowToVram(windowId, COPYWIN_FULL);
+}
+#endif // SWSH_BATTLE_UI
+
 void ClearDialogWindowAndFrame(u8 windowId, bool8 copyToVram)
 {
     DeactivateSingleTextPrinter(windowId, WINDOW_TEXT_PRINTER);
@@ -377,6 +410,39 @@ static void WindowFunc_ClearDialogWindowAndFrame(u8 bg, u8 tilemapLeft, u8 tilem
 {
     FillBgTilemapBufferRect(bg, 0, tilemapLeft - 3, tilemapTop - 1, width + 6, height + 2, STD_WINDOW_PALETTE_NUM);
 }
+
+#if SWSH_BATTLE_UI
+// Unlike the standard frame this one is not a 3x3 nine-patch: it is a 5-wide tilemap
+// whose middle column tiles vertically, so the frame is drawn column by column.
+static void WindowFunc_DrawSwShMoveDescFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+{
+    u32 i;
+
+    // Left edge (tilemap column 0).
+    CopyRectToBgTilemapBufferRect(bg, sSwShMoveDescBoxTilemap,
+                                  0, 0, SWSH_MOVE_DESC_TILEMAP_WIDTH, SWSH_MOVE_DESC_TILEMAP_HEIGHT,
+                                  tilemapLeft - 1, tilemapTop, 1, SWSH_MOVE_DESC_TILEMAP_HEIGHT,
+                                  STD_WINDOW_PALETTE_NUM, SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM, 0);
+
+    // Middle (tilemap column 1) repeated across the window body.
+    for (i = tilemapLeft; i < tilemapLeft + width; i++)
+        CopyRectToBgTilemapBufferRect(bg, sSwShMoveDescBoxTilemap,
+                                      1, 0, SWSH_MOVE_DESC_TILEMAP_WIDTH, SWSH_MOVE_DESC_TILEMAP_HEIGHT,
+                                      i, tilemapTop, 1, SWSH_MOVE_DESC_TILEMAP_HEIGHT,
+                                      STD_WINDOW_PALETTE_NUM, SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM, 0);
+
+    // Right edge (tilemap columns 2-4).
+    CopyRectToBgTilemapBufferRect(bg, sSwShMoveDescBoxTilemap,
+                                  2, 0, SWSH_MOVE_DESC_TILEMAP_WIDTH, SWSH_MOVE_DESC_TILEMAP_HEIGHT,
+                                  tilemapLeft + width, tilemapTop, 3, SWSH_MOVE_DESC_TILEMAP_HEIGHT,
+                                  STD_WINDOW_PALETTE_NUM, SWSH_MOVE_DESC_WINDOW_BASE_TILE_NUM, 0);
+}
+
+static void WindowFunc_ClearSwShMoveDescWindowAndFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+{
+    FillBgTilemapBufferRect(bg, 0, tilemapLeft - 1, tilemapTop, width + 4, height + 1, STD_WINDOW_PALETTE_NUM);
+}
+#endif // SWSH_BATTLE_UI
 
 void SetStandardWindowBorderStyle(u8 windowId, bool8 copyToVram)
 {
