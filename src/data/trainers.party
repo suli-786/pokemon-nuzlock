@@ -4594,7 +4594,7 @@ Gender: Male
 Music: Elite Four
 Items: Full Restore / Full Restore
 Double Battle: No
-AI: Basic Trainer / Force Setup First Turn
+AI: Smart Trainer / Prediction / Force Setup First Turn
 Mugshot: Purple
 
 Mightyena
@@ -4645,7 +4645,7 @@ Gender: Female
 Music: Elite Four
 Items: Full Restore / Full Restore
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 Mugshot: Green
 
 Dusclops
@@ -4696,7 +4696,7 @@ Gender: Female
 Music: Elite Four
 Items: Full Restore / Full Restore
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 Mugshot: Pink
 
 Sealeo
@@ -4747,7 +4747,7 @@ Gender: Male
 Music: Elite Four
 Items: Full Restore / Full Restore
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 Mugshot: Blue
 
 Shelgon
@@ -4798,7 +4798,7 @@ Gender: Female
 Music: Female
 Items: Potion / Potion
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Geodude
 Level: 12
@@ -4832,7 +4832,7 @@ Gender: Male
 Music: Male
 Items: Super Potion / Super Potion
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Machop
 Level: 16
@@ -4866,7 +4866,7 @@ Gender: Male
 Music: Male
 Items: Super Potion / Super Potion
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Voltorb
 Level: 20
@@ -4908,7 +4908,7 @@ Gender: Female
 Music: Female
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Numel
 Level: 24
@@ -4950,7 +4950,7 @@ Gender: Male
 Music: Male
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Spinda
 Level: 27
@@ -4992,7 +4992,7 @@ Gender: Female
 Music: Female
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
-AI: Basic Trainer / Risky
+AI: Smart Trainer / Prediction / Risky
 
 Swablu
 Level: 29
@@ -5042,7 +5042,7 @@ Gender: Male
 Music: Female
 Items: Hyper Potion / Hyper Potion / Hyper Potion / Hyper Potion
 Double Battle: Yes
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Claydol
 Level: 41
@@ -5084,7 +5084,7 @@ Gender: Male
 Music: Male
 Items: Hyper Potion / Hyper Potion
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 
 Luvdisc
 Level: 41
@@ -6250,7 +6250,7 @@ Gender: Male
 Music: Male
 Items: Full Restore / Full Restore / Full Restore / Full Restore
 Double Battle: No
-AI: Basic Trainer
+AI: Smart Trainer / Prediction
 Mugshot: Yellow
 
 Wailord

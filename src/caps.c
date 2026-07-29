@@ -17,7 +17,7 @@ u32 GetCurrentLevelCap(void)
         {FLAG_BADGE06_GET, 33},
         {FLAG_BADGE07_GET, 42},
         {FLAG_BADGE08_GET, 46},
-        {FLAG_IS_CHAMPION, 58},
+        {FLAG_IS_CHAMPION, 64}, // Overhaul: final cap 64 (highest evo, Hydreigon); E4 teams are tuned to this cap
     };
 
     u32 i;

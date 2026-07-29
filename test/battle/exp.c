@@ -35,7 +35,7 @@ WILD_BATTLE_TEST("Higher leveled Pokemon give more exp", s32 exp)
     PARAMETRIZE { level = 10; }
 
     GIVEN {
-        PLAYER(SPECIES_WOBBUFFET) { Level(20); }
+        PLAYER(SPECIES_WOBBUFFET) { Level(14); } // Overhaul: stays under the badge-less level cap (15) so exp still flows
         OPPONENT(SPECIES_CATERPIE) { Level(level); HP(1); }
     } WHEN {
         TURN { MOVE(player, MOVE_SCRATCH); }
@@ -103,6 +103,7 @@ WILD_BATTLE_TEST("Large exp gains are supported", s32 exp) // #1455
     PARAMETRIZE { level = MAX_LEVEL; }
 
     GIVEN {
+        ASSUME(B_EXP_CAP_TYPE == EXP_CAP_NONE); // Overhaul: hard cap truncates large gains; this test is specifically about uncapped gains (#1455)
         PLAYER(SPECIES_WOBBUFFET) { Level(1); Item(ITEM_LUCKY_EGG); OTName("Test"); } // OT Name is different so it gets more exp as a traded mon
         OPPONENT(SPECIES_BLISSEY) { Level(level); HP(1); }
     } WHEN {
@@ -164,6 +165,7 @@ WILD_BATTLE_TEST("Exp Share(held) gives Experience to mons which did not partici
     PARAMETRIZE { item = ITEM_EXP_SHARE; }
 
     GIVEN {
+        ASSUME(B_EXP_CAP_TYPE == EXP_CAP_NONE); // Overhaul: the level-40 recipient is over the badge-less cap and would gain 0
         PLAYER(SPECIES_WOBBUFFET);
         PLAYER(SPECIES_WYNAUT) { Level(40); Item(item); }
         OPPONENT(SPECIES_CATERPIE) { Level(10); HP(1); }
