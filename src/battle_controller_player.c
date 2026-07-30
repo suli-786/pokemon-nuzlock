@@ -1730,6 +1730,7 @@ static void SetMoveSlotTints(struct ChooseMoveStruct *moveInfo, enum BattlerId b
 
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
+        bool32 selected = (i == gMoveSelectionCursor[battler]);
         enum Move move = moveInfo->moves[i];
         u16 color;
 
@@ -1743,6 +1744,20 @@ static void SetMoveSlotTints(struct ChooseMoveStruct *moveInfo, enum BattlerId b
             if (IsGimmickSelected(battler, GIMMICK_DYNAMAX) || GetActiveGimmick(battler) == GIMMICK_DYNAMAX)
                 move = GetMaxMove(battler, move);
             color = SolidTypeColor(gTypesInfo[GetMoveType(move)].teraTypeRGBValue);
+        }
+
+        // The chosen slot is lifted toward white. Sword/Shield inverts its selected
+        // button; the arrow alone was doing all the work here, and four equally
+        // solid panels give the eye nothing to lock onto. Brightening rather than
+        // inverting keeps the type readable while the slot is active.
+        if (selected)
+        {
+            u32 r = GET_R(color), g = GET_G(color), b = GET_B(color);
+
+            r += (31 - r) / 2;
+            g += (31 - g) / 2;
+            b += (31 - b) / 2;
+            color = RGB(r, g, b);
         }
 
         gPlttBufferUnfaded[BG_PLTT_ID(5) + MOVE_TINT_PAL_BASE + i] = color;
@@ -1843,10 +1858,13 @@ static void MoveSelectionDisplayMoveType(enum BattlerId battler)
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_TYPE);
 
 #if SWSH_BATTLE_UI
-    // Redrawn alongside the type, so it follows the cursor. This is the only place
+    // Redrawn alongside the type, so both follow the cursor. This is the only place
     // that needs to know the category changed -- the sprite's lifetime is handled by
     // TryToHideMoveCategoryIcon() on the move menu's exit paths.
     TryToAddMoveCategoryIcon(GetMoveCategory(move));
+    // Re-tint too, so the selected slot's highlight tracks the cursor.
+    // MoveSelectionDisplayMoveNames only runs on entry.
+    SetMoveSlotTints(moveInfo, battler);
 #endif
 }
 

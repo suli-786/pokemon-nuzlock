@@ -2896,10 +2896,10 @@ static const struct OamData sOamData_MoveInfoWindow =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = SPRITE_SHAPE(32x32),
+    .shape = SPRITE_SHAPE(16x8),
     .x = 0,
     .matrixNum = 0,
-    .size = SPRITE_SIZE(32x32),
+    .size = SPRITE_SIZE(16x8),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -2909,7 +2909,13 @@ static const struct OamData sOamData_MoveInfoWindow =
 static const struct SpriteTemplate sSpriteTemplate_MoveInfoWindow =
 {
     .tileTag = MOVE_INFO_WINDOW_TAG,
+#if SWSH_BATTLE_UI
+    // The button chip brings its own palette rather than borrowing the ability
+    // pop-up's, which is a different set of colours entirely.
+    .paletteTag = MOVE_INFO_WINDOW_TAG,
+#else
     .paletteTag = TAG_ABILITY_POP_UP,
+#endif
     .oam = &sOamData_MoveInfoWindow,
     .callback = SpriteCB_MoveInfoWin
 };
@@ -2941,10 +2947,15 @@ static const struct SpriteSheet sSpriteSheet_LastUsedBallWindow =
 };
 
 #if SWSH_BATTLE_UI
+    // Overhaul: the 32x32 "L / MOVE INFO" tab is replaced by the party menu's 16x8
+    // button chip -- eight times less screen for the same prompt, and it is the same
+    // button art the rest of the SwSh UI already uses. See docs/overhaul/ROADMAP.md.
     #if B_MOVE_DESCRIPTION_BUTTON == R_BUTTON
-    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/move_info_window_r.png", ".4bpp");
+    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/party_menu/swsh/button_r.png", ".4bpp");
+    static const u16 sMoveInfoWindowPal[] = INCGFX_U16("graphics/party_menu/swsh/button_r.png", ".gbapal");
     #else
-    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/battle_interface/swsh/move_info_window_l.png", ".4bpp");
+    static const u8 sMoveInfoWindowGfx[] = INCGFX_U8("graphics/party_menu/swsh/button_l.png", ".4bpp");
+    static const u16 sMoveInfoWindowPal[] = INCGFX_U16("graphics/party_menu/swsh/button_l.png", ".gbapal");
     #endif
 #else
     #if B_MOVE_DESCRIPTION_BUTTON == R_BUTTON
@@ -2958,6 +2969,13 @@ static const struct SpriteSheet sSpriteSheet_MoveInfoWindow =
 {
     sMoveInfoWindowGfx, sizeof(sMoveInfoWindowGfx), MOVE_INFO_WINDOW_TAG
 };
+
+#if SWSH_BATTLE_UI
+static const struct SpritePalette sSpritePalette_MoveInfoWindow =
+{
+    sMoveInfoWindowPal, MOVE_INFO_WINDOW_TAG
+};
+#endif
 
 #if SWSH_BATTLE_UI
 // The SwSh window art puts the ball further into the frame and 6px higher.
@@ -3076,7 +3094,11 @@ void TryToAddMoveInfoWindow(void)
     if (B_MOVE_DESCRIPTION_BUTTON == L_BUTTON && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_L_EQUALS_A)
         return;
 
+#if SWSH_BATTLE_UI
+    LoadSpritePalette(&sSpritePalette_MoveInfoWindow);
+#else
     LoadSpritePalette(&sSpritePalette_AbilityPopUp);
+#endif
     if (GetSpriteTileStartByTag(MOVE_INFO_WINDOW_TAG) == 0xFFFF)
         LoadSpriteSheet(&sSpriteSheet_MoveInfoWindow);
 
@@ -3095,8 +3117,14 @@ void TryToHideMoveInfoWindow(void)
 static void DestroyMoveInfoWinGfx(struct Sprite *sprite)
 {
     FreeSpriteTilesByTag(MOVE_INFO_WINDOW_TAG);
+#if SWSH_BATTLE_UI
+    // Free the chip's own palette. Releasing TAG_ABILITY_POP_UP here would drop a
+    // palette this sprite never owned.
+    FreeSpritePaletteByTag(MOVE_INFO_WINDOW_TAG);
+#else
     if (GetSpriteTileStartByTag(TAG_LAST_BALL_WINDOW) == 0xFFFF)
         FreeSpritePaletteByTag(TAG_ABILITY_POP_UP);
+#endif
     DestroySprite(sprite);
     gBattleStruct->moveInfoSpriteId = MAX_SPRITES;
 }
