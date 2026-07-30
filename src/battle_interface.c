@@ -3445,6 +3445,41 @@ void TryToAddMoveCategoryIcon(u32 category)
 
     StartSpriteAnim(&gSprites[sMoveCategoryIconSpriteId], category);
     gSprites[sMoveCategoryIconSpriteId].invisible = FALSE;
+
+    // Physical red, special blue, status grey -- the convention every other Pokemon
+    // UI uses. The art is two-tone: every frame is drawn in palette indices 14
+    // (body) and 12 (shade) and nothing else, so recolouring is two writes rather
+    // than three sets of icons. This has to touch the sprite palette; writing a
+    // background entry does nothing to an OBJ.
+    {
+        u8 palSlot = IndexOfSpritePaletteTag(TAG_SWSH_CATEGORY_ICONS);
+
+        if (palSlot != 0xFF)
+        {
+            u16 body, shade;
+
+            switch (category)
+            {
+            case DAMAGE_CATEGORY_PHYSICAL:
+                body = RGB(28, 6, 5);
+                shade = RGB(18, 3, 2);
+                break;
+            case DAMAGE_CATEGORY_SPECIAL:
+                body = RGB(6, 14, 30);
+                shade = RGB(3, 8, 20);
+                break;
+            default:
+                body = RGB(23, 23, 23);
+                shade = RGB(13, 13, 13);
+                break;
+            }
+
+            gPlttBufferUnfaded[OBJ_PLTT_ID(palSlot) + 14] = body;
+            gPlttBufferFaded[OBJ_PLTT_ID(palSlot) + 14] = body;
+            gPlttBufferUnfaded[OBJ_PLTT_ID(palSlot) + 12] = shade;
+            gPlttBufferFaded[OBJ_PLTT_ID(palSlot) + 12] = shade;
+        }
+    }
 }
 
 void TryToHideMoveCategoryIcon(void)
