@@ -1682,7 +1682,11 @@ const struct BlendSettings gTimeOfDayBlend[] =
     [TIME_MORNING] = {.coeff = 4,  .blendColor = 0xA8B0E0,   .isTint = TRUE},
     [TIME_DAY]     = {.coeff = 0,  .blendColor = 0,          .isTint = FALSE},
     [TIME_EVENING] = {.coeff = 4,  .blendColor = 0xA8B0E0,   .isTint = TRUE},
-    [TIME_NIGHT]   = {.coeff = 10, .blendColor = TINT_NIGHT, .isTint = TRUE},
+    // Overhaul: night was at 10 against morning and evening's 4, which buried the
+    // Platinum overworld sprites -- the trees and the player read as one dark mass.
+    // 6 keeps the night mood while leaving sprites legible. Raise it back toward 10
+    // if you want night to feel heavier again.
+    [TIME_NIGHT]   = {.coeff = 6,  .blendColor = TINT_NIGHT, .isTint = TRUE},
 };
 
 #define DEFAULT_WEIGHT 256
