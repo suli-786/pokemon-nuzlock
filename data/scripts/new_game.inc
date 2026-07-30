@@ -354,6 +354,16 @@ Overhaul_EventScript_NewGamePreset::
 	setvar VAR_SEAFLOOR_CAVERN_STATE, 1
 	setvar VAR_ROUTE128_STATE, 2
 	setvar VAR_SKY_PILLAR_STATE, 3
+	@ The Sky Pillar door is a metatile swap in SkyPillar_Outside_OnLoad, gated on
+	@ FLAG_WALLACE_GOES_TO_SKY_PILLAR. Vanilla sets that in CaveOfOrigin_B1F, inside
+	@ the Sootopolis crisis this preset resolves, so without it the entrance stays
+	@ sealed forever -- and GYM_CLAIMS.md assigns SKY_PILLAR_1F/3F/5F to gym 8's
+	@ pool, which would have let gym 8 field species from a map the player can never
+	@ enter. That breaks the rule that a gym only uses what was obtainable.
+	setflag FLAG_WALLACE_GOES_TO_SKY_PILLAR
+	@ And name it on the region map / Pokedex area screen now it is reachable
+	@ (src/landmark.c, src/pokedex_area_screen.c).
+	setflag FLAG_LANDMARK_SKY_PILLAR
 
 	@ --- Wally escort + catch tutorial cut ---
 	@ Vanilla forces ~5 minutes of lockall on the first Petalburg Gym visit:
