@@ -4,6 +4,32 @@
 #include "battle_controllers.h"
 #include "config/swsh_ui.h"
 
+// Overhaul: the player healthbox stacks four rows -- nick+level, HP bar, HP
+// numbers, exp bar -- which is what makes it tall enough to eat the corner of
+// the screen. The owner does not read the exp bar, so hiding it reclaims a row
+// for the slimmer frame. See docs/overhaul/ROADMAP.md 7.20.
+//
+// This hides the bar only. MoveBattleBar() still runs and still returns the
+// value the exp-gain task in src/battle_controller_player.c loops on until it
+// reads -1, so exp, the SE_EXP sound and level-ups all behave exactly as before;
+// only MoveBattleBarGraphically() is skipped. Disabling the bar's logic instead
+// would stall that task.
+#define SWSH_HIDE_EXP_BAR   TRUE
+
+// First of four consecutive entries in battle BG palette 5 used to tint the move
+// slots by type. graphics/battle_interface/text.pal leaves 5-10 black and unused,
+// so 6-9 are free; MoveSelectionDisplayMoveNames() writes the colours each time
+// the move list is drawn. Keep this in step with the four B_WIN_MOVE_NAME_* entries
+// in sTextOnWindowsInfo_Normal (src/battle_message.c).
+#define MOVE_TINT_PAL_BASE  6
+
+// Battle window palette 5, entry 5, holds (48,48,48) -- the same dark as the SwSh
+// panel fill in graphics/battle_interface/swsh/textbox.png (tile 10, palette 0
+// index 15). Windows drawn over that panel fill with this instead of white, so the
+// box disappears into the panel and only its text shows. That, plus flattening the
+// frame tiles out of textbox_map.bin, is what removes the chunky borders.
+#define BATTLE_PANEL_PAL_IDX  5
+
 // used for sBattlerCoords and sBattlerHealthboxCoords
 enum BattleCoordTypes
 {
@@ -141,6 +167,8 @@ void CategoryIcons_LoadSpritesGfx(void);
 extern const struct SpriteTemplate gSpriteTemplate_SwShCategoryIcons;
 #endif
 void TryToAddMoveInfoWindow(void);
+void TryToAddMoveCategoryIcon(u32 category);
+void TryToHideMoveCategoryIcon(void);
 void TryToHideMoveInfoWindow(void);
 void TryAddPokeballIconToHealthbox(u8 healthboxSpriteId, bool8 noStatus);
 void UpdateNickInHealthbox(u8 healthboxSpriteId, struct Pokemon *mon);

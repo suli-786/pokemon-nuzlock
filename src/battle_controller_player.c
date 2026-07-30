@@ -83,6 +83,9 @@ static void MoveSelectionDisplayMoveType(enum BattlerId battler);
 static void MoveSelectionDisplayMoveNames(enum BattlerId battler);
 static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler);
 static void MoveSelectionDisplayMoveDescription(enum BattlerId battler);
+#if SWSH_BATTLE_UI
+static void SetPlayerHealthboxesVisible(bool32 visible);
+#endif
 static void WaitForMonSelection(enum BattlerId battler);
 static void CompleteWhenChoseItem(enum BattlerId battler);
 static void Task_LaunchLvlUpAnim(u8);
@@ -703,6 +706,7 @@ void HandleInputChooseMove(enum BattlerId battler)
     if (JOY_NEW(A_BUTTON) && !gBattleStruct->descriptionSubmenu)
     {
         TryToHideMoveInfoWindow();
+        TryToHideMoveCategoryIcon();
         PlaySE(SE_SELECT);
 
         enum MoveTarget moveTarget = GetBattlerMoveTargetType(battler, moveInfo->moves[gMoveSelectionCursor[battler]]);
@@ -813,6 +817,7 @@ void HandleInputChooseMove(enum BattlerId battler)
             HideGimmickTriggerSprite();
             BtlController_Complete(battler);
             TryToHideMoveInfoWindow();
+        TryToHideMoveCategoryIcon();
         }
     }
     else if (JOY_NEW(DPAD_LEFT) && !gBattleStruct->zmove.viewing)
@@ -915,6 +920,9 @@ void HandleInputChooseMove(enum BattlerId battler)
             ClearStdWindowAndFrame(B_WIN_MOVE_DESCRIPTION, FALSE);
 #endif
             CopyWindowToVram(B_WIN_MOVE_DESCRIPTION, COPYWIN_GFX);
+#if SWSH_BATTLE_UI
+            SetPlayerHealthboxesVisible(TRUE);
+#endif
             PlaySE(SE_SELECT);
             if (B_SHOW_EFFECTIVENESS)
                 MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
@@ -926,6 +934,9 @@ void HandleInputChooseMove(enum BattlerId battler)
         !(B_MOVE_DESCRIPTION_BUTTON == L_BUTTON && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_L_EQUALS_A))
     {
         gBattleStruct->descriptionSubmenu = TRUE;
+#if SWSH_BATTLE_UI
+        SetPlayerHealthboxesVisible(FALSE);
+#endif
         TryMoveSelectionDisplayMoveDescription(battler);
     }
     else if (JOY_NEW(START_BUTTON))
@@ -1671,11 +1682,85 @@ static void PlayerHandleYesNoInput(enum BattlerId battler)
     }
 }
 
+#if SWSH_BATTLE_UI
+// Solid type colours with white text on top, rather than the pastel wash this
+// started as. The two go together: pastels were only ever needed because the move
+// name was drawn in dark grey. Flipping the text to white (see the B_WIN_MOVE_NAME_*
+// entries in src/battle_message.c) frees the panel to carry the type's real colour.
+//
+// The cap is the other half of that bargain. TYPE_NORMAL is literally RGB_WHITE in
+// gTypesInfo and Flying, Ice and Steel are nearly as bright, so without a ceiling
+// white text would sit on white. Clamping brightness keeps every panel dark enough
+// to read while leaving the hues themselves untouched.
+#define MOVE_TINT_CEILING 20    // out of 31
+#define MOVE_TINT_EMPTY   RGB(11, 11, 13)
+
+static u16 SolidTypeColor(u16 rgb)
+{
+    u32 r = GET_R(rgb);
+    u32 g = GET_G(rgb);
+    u32 b = GET_B(rgb);
+
+    // Scale the whole colour down rather than clamping each channel separately --
+    // clamping per channel would desaturate bright types toward grey instead of
+    // just darkening them.
+    u32 peak = r;
+    if (g > peak)
+        peak = g;
+    if (b > peak)
+        peak = b;
+
+    if (peak > MOVE_TINT_CEILING)
+    {
+        r = r * MOVE_TINT_CEILING / peak;
+        g = g * MOVE_TINT_CEILING / peak;
+        b = b * MOVE_TINT_CEILING / peak;
+    }
+
+    return RGB(r, g, b);
+}
+
+// Paints palette 5 entries MOVE_TINT_PAL_BASE..+3 with each slot's type colour, so
+// the four move panels read as their types at a glance. Empty slots stay white so
+// they look like the blanks they are. Both palette buffers are written because the
+// battle can be mid-fade when the move list is redrawn.
+static void SetMoveSlotTints(struct ChooseMoveStruct *moveInfo, enum BattlerId battler)
+{
+    u32 i;
+
+    for (i = 0; i < MAX_MON_MOVES; i++)
+    {
+        enum Move move = moveInfo->moves[i];
+        u16 color;
+
+        if (move == MOVE_NONE)
+        {
+            // Darker and greyer than any real type, so an empty slot still reads as empty.
+            color = MOVE_TINT_EMPTY;
+        }
+        else
+        {
+            if (IsGimmickSelected(battler, GIMMICK_DYNAMAX) || GetActiveGimmick(battler) == GIMMICK_DYNAMAX)
+                move = GetMaxMove(battler, move);
+            color = SolidTypeColor(gTypesInfo[GetMoveType(move)].teraTypeRGBValue);
+        }
+
+        gPlttBufferUnfaded[BG_PLTT_ID(5) + MOVE_TINT_PAL_BASE + i] = color;
+        gPlttBufferFaded[BG_PLTT_ID(5) + MOVE_TINT_PAL_BASE + i] = color;
+    }
+}
+#endif
+
 static void MoveSelectionDisplayMoveNames(enum BattlerId battler)
 {
     s32 i;
     struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
     gNumberOfMovesToChoose = 0;
+
+#if SWSH_BATTLE_UI
+    // Before the windows are filled, or the first draw uses whatever was there.
+    SetMoveSlotTints(moveInfo, battler);
+#endif
 
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
@@ -1756,7 +1841,37 @@ static void MoveSelectionDisplayMoveType(enum BattlerId battler)
 
     PrependFontIdToFit(txtPtr, end, FONT_NORMAL, WindowWidthPx(B_WIN_MOVE_TYPE) - 25);
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_TYPE);
+
+#if SWSH_BATTLE_UI
+    // Redrawn alongside the type, so it follows the cursor. This is the only place
+    // that needs to know the category changed -- the sprite's lifetime is handled by
+    // TryToHideMoveCategoryIcon() on the move menu's exit paths.
+    TryToAddMoveCategoryIcon(GetMoveCategory(move));
+#endif
 }
+
+#if SWSH_BATTLE_UI
+// The SwSh move-description window is a BG window spanning the middle band, which is
+// exactly where the player-side healthboxes live. SwSh can afford both across 1280px;
+// at 240 the description draws straight over the nickname, so "Sinistea" reads as
+// "stea". Hide the player's boxes for as long as the submenu is up -- the opponent's
+// sit higher and are never covered, so they stay. See docs/overhaul/ROADMAP.md 7.20.
+static void SetPlayerHealthboxesVisible(bool32 visible)
+{
+    u32 i;
+
+    for (i = 0; i < gBattlersCount; i++)
+    {
+        if (!IsOnPlayerSide(i) || gHealthboxSpriteIds[i] == 0xFF)
+            continue;
+
+        if (visible)
+            SetHealthboxSpriteVisible(gHealthboxSpriteIds[i]);
+        else
+            SetHealthboxSpriteInvisible(gHealthboxSpriteIds[i]);
+    }
+}
+#endif
 
 static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler)
 {
@@ -1863,8 +1978,11 @@ void MoveSelectionCreateCursorAt(u8 cursorPosition, u8 baseTileNum)
 void MoveSelectionDestroyCursorAt(u8 cursorPosition)
 {
     u16 src[2];
-    src[0] = 0x1016;
-    src[1] = 0x1016;
+    // Overhaul: tile 0x16 (22) is the old white box fill. The battle textbox
+    // tilemap now uses tile 10 for these bands, so restoring 22 here repainted a
+    // white column wherever the cursor was not.
+    src[0] = 0x100A;
+    src[1] = 0x100A;
 
     CopyToBgTilemapBufferRect_ChangePalette(0, src, 9 * (cursorPosition & 1) + 1, 55 + (cursorPosition & 2), 1, 2, 0x11);
     CopyBgTilemapBufferToVram(0);
@@ -1883,8 +2001,11 @@ void ActionSelectionCreateCursorAt(u8 cursorPosition, u8 baseTileNum)
 void ActionSelectionDestroyCursorAt(u8 cursorPosition)
 {
     u16 src[2];
-    src[0] = 0x1016;
-    src[1] = 0x1016;
+    // Overhaul: tile 0x16 (22) is the old white box fill. The battle textbox
+    // tilemap now uses tile 10 for these bands, so restoring 22 here repainted a
+    // white column wherever the cursor was not.
+    src[0] = 0x100A;
+    src[1] = 0x100A;
 
     CopyToBgTilemapBufferRect_ChangePalette(0, src, 7 * (cursorPosition & 1) + 16, 35 + (cursorPosition & 2), 1, 2, 0x11);
     CopyBgTilemapBufferToVram(0);
@@ -2485,11 +2606,18 @@ static u32 CheckTargetTypeEffectiveness(enum BattlerId battler)
 
 static void MoveSelectionDisplayMoveEffectiveness(u32 foeEffectiveness, enum BattlerId battler)
 {
+    // Overhaul: the glyph alone was doing all the work and none of it legibly -- a
+    // hollow circle, a dot, a triangle and a cross in the same grey, on a strip the
+    // eye skips. Colour carries the meaning now and the shape just confirms it:
+    // green for super effective, grey for resisted, red for immune, and plain white
+    // left on neutral so only the outcomes worth reacting to draw the eye.
+    // Index 10 of graphics/battle_interface/text.pal is the green; 11 and 1 are the
+    // palette's existing grey and red.
     static const u8 noIcon[] =  _("");
     static const u8 effectiveIcon[] =  _("{CIRCLE_HOLLOW}");
-    static const u8 superEffectiveIcon[] =  _("{CIRCLE_DOT}");
-    static const u8 notVeryEffectiveIcon[] =  _("{TRIANGLE}");
-    static const u8 immuneIcon[] =  _("{BIG_MULT_X}");
+    static const u8 superEffectiveIcon[] =  _("{COLOR 10}{CIRCLE_DOT}");
+    static const u8 notVeryEffectiveIcon[] =  _("{COLOR 11}{TRIANGLE}");
+    static const u8 immuneIcon[] =  _("{COLOR 1}{BIG_MULT_X}");
     struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
     u8 *txtPtr;
 

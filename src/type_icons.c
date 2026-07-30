@@ -5,7 +5,9 @@
 #include "battle_gimmick.h"
 #include "decompress.h"
 #include "graphics.h"
+#include "palette.h"
 #include "pokedex.h"
+#include "pokemon_summary_screen.h"
 #include "sprite.h"
 #include "type_icons.h"
 
@@ -58,14 +60,19 @@ static s32 GetTypeIconBounceMovement(s32, u32);
 
 const struct Coords16 sTypeIconPositions[][2] =
 {
+    // Overhaul: the singles icons were straddling the edge of their own healthbox
+    // and getting clipped -- the player's sat at x 221 (spanning 205-237) while the
+    // card ends near 235, and the opponent's at x 20 (spanning 4-36) while the card
+    // only starts at 12. Both are pulled inboard so they sit on the card, which has
+    // room for them now the exp bar is gone.
     [B_POSITION_PLAYER_LEFT] =
     {
-        [FALSE] = {221, 86},
+        [FALSE] = {212, 84},
         [TRUE] = {144, 71},
     },
     [B_POSITION_OPPONENT_LEFT] =
     {
-        [FALSE] = {20, 26},
+        [FALSE] = {34, 50},
         [TRUE] = {97 + SWSH_OPPONENT_DOUBLES_TYPE_ICON_X_SHIFT, 14},
     },
     [B_POSITION_PLAYER_RIGHT] =
@@ -272,6 +279,24 @@ void LoadTypeIcons(enum BattlerId battler)
 
 static void LoadTypeSpritesAndPalettes(void)
 {
+#if SWSH_BATTLE_UI
+    // Overhaul: the opponent's types are shown with the 32x16 name badges the
+    // summary screen already uses (graphics/types/*.png via gSpriteSheet_MoveTypes)
+    // instead of the stock 8x16 chips. At 8 pixels the chip's symbol is unreadable --
+    // poison, ghost and psychic are indistinguishable -- while the badge spells the
+    // type out. Nothing is drawn; this is the same art the rest of the game uses.
+    //
+    // The badges want 3 OBJ palettes at slots 13-15 (matching how the summary screen
+    // loads them, since gTypesInfo[].palette indexes that block) against the chips'
+    // 2, and about 6.6KB of object VRAM against 2.4KB. That is affordable only
+    // because the player's icons are no longer created at all -- see
+    // LoadTypeIconsPerBattler.
+    if (GetSpriteTileStartByTag(gSpriteSheet_MoveTypes.tag) != 0xFFFF)
+        return;
+
+    LoadCompressedSpriteSheet(&gSpriteSheet_MoveTypes);
+    LoadPalette(gMoveTypes_Pal, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
+#else
     if (IndexOfSpritePaletteTag(TYPE_ICON_TAG) != UCHAR_MAX)
         return;
 
@@ -279,6 +304,7 @@ static void LoadTypeSpritesAndPalettes(void)
     LoadCompressedSpriteSheet(&sSpriteSheet_TypeIcons2);
     LoadSpritePalette(&sTypeIconPal1);
     LoadSpritePalette(&sTypeIconPal2);
+#endif
 }
 
 static void LoadTypeIconsPerBattler(enum BattlerId battler, u32 position)
@@ -290,6 +316,15 @@ static void LoadTypeIconsPerBattler(enum BattlerId battler, u32 position)
 
     if (!IsBattlerAlive(battlerId))
         return;
+
+#if SWSH_BATTLE_UI
+    // Opponent only. You already know your own Pokemon's typing, and the badges are
+    // four times the width of the chips they replace -- showing all four on a 240px
+    // screen would bury the battlefield. Skipping the player's side is also what pays
+    // for the badges' extra palette and VRAM.
+    if (IsOnPlayerSide(battlerId))
+        return;
+#endif
 
     for (typeNum = 0; typeNum < 2; ++typeNum)
         types[typeNum] = GetMonPublicType(battlerId, typeNum);
@@ -409,13 +444,20 @@ static bool32 ShouldSkipSecondType(enum Type types[], u32 typeNum)
 static void SetTypeIconXY(s32* x, s32* y, u32 position, bool32 useDoubleBattleCoords, u32 typeNum)
 {
     *x = sTypeIconPositions[position][useDoubleBattleCoords].x;
-    *y = sTypeIconPositions[position][useDoubleBattleCoords].y + (11 * typeNum);
+    // 11px apart suits the 8x16 chips; the 32x16 badges need 17 or the second type
+    // overlaps the first.
+    *y = sTypeIconPositions[position][useDoubleBattleCoords].y
+       + ((SWSH_BATTLE_UI ? 17 : 11) * typeNum);
 }
 
 static void CreateSpriteAndSetTypeSpriteAttributes(enum Type type, u32 x, u32 y, u32 position, enum BattlerId battler, bool32 useDoubleBattleCoords)
 {
     struct Sprite* sprite;
+#if SWSH_BATTLE_UI
+    const struct SpriteTemplate* spriteTemplate = &gSpriteTemplate_MoveTypes;
+#else
     const struct SpriteTemplate* spriteTemplate = gTypesInfo[type].useSecondTypeIconPalette ? &sSpriteTemplate_TypeIcons2 : &sSpriteTemplate_TypeIcons1;
+#endif
     u32 spriteId = CreateSpriteAtEnd(spriteTemplate, x, y, UCHAR_MAX);
 
     if (spriteId == MAX_SPRITES)
@@ -426,7 +468,19 @@ static void CreateSpriteAndSetTypeSpriteAttributes(enum Type type, u32 x, u32 y,
     sprite->tBattlerId = battler;
     sprite->tVerticalPosition = y;
 
+#if SWSH_BATTLE_UI
+    // gSpriteTemplate_MoveTypes carries no callback of its own, so the slide-in and
+    // hide behaviour has to be reattached. Palette follows gTypesInfo, offset to the
+    // 13-15 block the sheet was loaded into. No flipping -- the badges carry text.
+    sprite->callback = SpriteCB_TypeIcon;
+    // gTypesInfo[].palette is already the absolute OBJ palette slot (13, 14 or 15),
+    // matching where LoadTypeSpritesAndPalettes puts the three palettes. Adding 13
+    // on top pushed it to 26-28 and the badge rendered solid black.
+    sprite->oam.paletteNum = gTypesInfo[type].palette;
+    sprite->hFlip = FALSE;
+#else
     sprite->hFlip = ShouldFlipTypeIcon(useDoubleBattleCoords, position, type);
+#endif
 
     StartSpriteAnim(sprite, type);
 }

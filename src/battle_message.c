@@ -3,6 +3,7 @@
 #include "battle_anim.h"
 #include "battle_ai_record.h"
 #include "battle_controllers.h"
+#include "battle_interface.h"   // MOVE_TINT_PAL_BASE, for the per-type move slot tints
 #include "battle_message.h"
 #include "battle_setup.h"
 #include "battle_special.h"
@@ -1460,8 +1461,13 @@ const u8 gText_LinkStandby[] = _("{PAUSE 16}Link standby…");
 const u8 gText_BattleMenu[] = _("Battle{CLEAR_TO 56}Bag\nPokémon{CLEAR_TO 56}Run");
 const u8 gText_SafariZoneMenu[] = _("Ball{CLEAR_TO 56}{POKEBLOCK}\nGo Near{CLEAR_TO 56}Run");
 const u8 gText_SafariZoneMenuFrlg[] = _("{PALETTE 5}{COLOR_HIGHLIGHT_SHADOW 13 14 15}BALL{CLEAR_TO 56}BAIT\nROCK{CLEAR_TO 56}RUN");
-const u8 gText_MoveInterfacePP[] = _("PP ");
-const u8 gText_MoveInterfaceType[] = _("TYPE/");
+// Overhaul: the "PP" and "TYPE/" labels are dropped. 35/35 is self-evidently PP and
+// "Normal" self-evidently a type, so the words were spending ~18px and ~30px of an
+// already-full 8x4 tile box on saying nothing. The space reclaimed on the type row
+// is where the colour-coded category icon goes. One leading space is kept so the
+// text does not sit flush against the panel edge now the frame is gone.
+const u8 gText_MoveInterfacePP[] = _(" ");
+const u8 gText_MoveInterfaceType[] = _(" ");
 const u8 gText_MoveInterfacePpType[] = _("{PALETTE 5}{BACKGROUND DYNAMIC_COLOR5}{TEXT_COLORS DYNAMIC_COLOR4 DYNAMIC_COLOR6 DYNAMIC_COLOR5}PP\nTYPE/");
 const u8 gText_MoveInterfaceDynamicColors[] = _("{PALETTE 5}{BACKGROUND DYNAMIC_COLOR5}{TEXT_COLORS DYNAMIC_COLOR4 DYNAMIC_COLOR6 DYNAMIC_COLOR5}");
 const u8 gText_WhichMoveToForget4[] = _("{PALETTE 5}{BACKGROUND DYNAMIC_COLOR5}{TEXT_COLORS DYNAMIC_COLOR4 DYNAMIC_COLOR6 DYNAMIC_COLOR5}Which move should\nbe forgotten?");
@@ -1585,114 +1591,122 @@ static const struct BattleWindowText sTextOnWindowsInfo_Normal[] =
         .color.shadow = 6,
     },
     [B_WIN_ACTION_MENU] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(BATTLE_PANEL_PAL_IDX),
         .fontId = FONT_NORMAL,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = BATTLE_PANEL_PAL_IDX,
+        .color.accent = BATTLE_PANEL_PAL_IDX,
+        .color.shadow = 0,
     },
+    // Overhaul: each move slot fills from its own palette index instead of the
+    // shared white 14, so MoveSelectionDisplayMoveNames() can tint the four panels
+    // by move type -- the most recognisable thing about the Sword/Shield battle
+    // screen. Palette 5 (graphics/battle_interface/text.pal) carries entries 5-10
+    // unused at black; MOVE_TINT_PAL_BASE claims 6-9. Text stays on 13/15 because
+    // the tint is muted toward white, so dark text on it stays legible.
+    // Only this Normal table is retinted -- the Arena and Kanto-tutorial tables
+    // keep plain white, since nothing sets their palette entries.
     [B_WIN_MOVE_NAME_1] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(MOVE_TINT_PAL_BASE + 0),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = MOVE_TINT_PAL_BASE + 0,
+        .color.accent = MOVE_TINT_PAL_BASE + 0,
+        .color.shadow = 12,
     },
     [B_WIN_MOVE_NAME_2] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(MOVE_TINT_PAL_BASE + 1),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = MOVE_TINT_PAL_BASE + 1,
+        .color.accent = MOVE_TINT_PAL_BASE + 1,
+        .color.shadow = 12,
     },
     [B_WIN_MOVE_NAME_3] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(MOVE_TINT_PAL_BASE + 2),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = MOVE_TINT_PAL_BASE + 2,
+        .color.accent = MOVE_TINT_PAL_BASE + 2,
+        .color.shadow = 12,
     },
     [B_WIN_MOVE_NAME_4] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(MOVE_TINT_PAL_BASE + 3),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = MOVE_TINT_PAL_BASE + 3,
+        .color.accent = MOVE_TINT_PAL_BASE + 3,
+        .color.shadow = 12,
     },
     [B_WIN_PP] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(BATTLE_PANEL_PAL_IDX),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
         .color.foreground = B_SHOW_EFFECTIVENESS != SHOW_EFFECTIVENESS_NEVER ? 13 : 12,
-        .color.background = 14,
-        .color.accent = 14,
+        .color.background = BATTLE_PANEL_PAL_IDX,
+        .color.accent = BATTLE_PANEL_PAL_IDX,
         .color.shadow = B_SHOW_EFFECTIVENESS != SHOW_EFFECTIVENESS_NEVER ? 15 : 11,
     },
     [B_WIN_DUMMY] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(BATTLE_PANEL_PAL_IDX),
         .fontId = FONT_NORMAL,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = BATTLE_PANEL_PAL_IDX,
+        .color.accent = BATTLE_PANEL_PAL_IDX,
+        .color.shadow = 0,
     },
     [B_WIN_PP_REMAINING] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(BATTLE_PANEL_PAL_IDX),
         .fontId = FONT_NORMAL,
         .x = 2,
         .y = 1,
         .speed = 0,
         .color.foreground = 12,
-        .color.background = 14,
-        .color.accent = 14,
+        .color.background = BATTLE_PANEL_PAL_IDX,
+        .color.accent = BATTLE_PANEL_PAL_IDX,
         .color.shadow = 11,
     },
     [B_WIN_MOVE_TYPE] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(BATTLE_PANEL_PAL_IDX),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = BATTLE_PANEL_PAL_IDX,
+        .color.accent = BATTLE_PANEL_PAL_IDX,
+        .color.shadow = 0,
     },
     [B_WIN_SWITCH_PROMPT] = {
-        .fillValue = PIXEL_FILL(0xE),
+        .fillValue = PIXEL_FILL(BATTLE_PANEL_PAL_IDX),
         .fontId = FONT_NARROW,
         .x = 0,
         .y = 1,
         .speed = 0,
-        .color.foreground = 13,
-        .color.background = 14,
-        .color.accent = 14,
-        .color.shadow = 15,
+        .color.foreground = 14,
+        .color.background = BATTLE_PANEL_PAL_IDX,
+        .color.accent = BATTLE_PANEL_PAL_IDX,
+        .color.shadow = 0,
     },
     [B_WIN_YESNO] = {
         .fillValue = PIXEL_FILL(0xE),

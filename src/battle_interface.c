@@ -2147,7 +2147,14 @@ s32 MoveBattleBar(enum BattlerId battler, u8 healthboxSpriteId, u8 whichBar, u8 
                     B_EXPBAR_PIXELS / 8, expFraction);
     }
 
+    // SWSH_HIDE_EXP_BAR drops the draw, never the arithmetic above: the caller in
+    // src/battle_controller_player.c spins on MoveBattleBar()'s return value until
+    // it reads -1 to know the exp has all been handed over.
+#if SWSH_HIDE_EXP_BAR
+    if (whichBar == HEALTH_BAR && !gBattleSpritesDataPtr->battlerData[battler].hpNumbersNoBars)
+#else
     if (whichBar == EXP_BAR || (whichBar == HEALTH_BAR && !gBattleSpritesDataPtr->battlerData[battler].hpNumbersNoBars))
+#endif
         MoveBattleBarGraphically(battler, whichBar);
 
     if (currentBarValue == -1)
@@ -3366,6 +3373,63 @@ const struct SpriteTemplate gSpriteTemplate_SwShCategoryIcons =
     .oam = &sOamData_SwShCategoryIcons,
     .anims = sSpriteAnimTable_SwShCategoryIcons,
 };
+
+// Right-hand end of the move-type row in the PP strip, in the space the "TYPE/"
+// label used to occupy.
+#define MOVE_CATEGORY_ICON_X   220
+#define MOVE_CATEGORY_ICON_Y   143
+
+// Overhaul: the move's damage category, shown permanently in the PP strip rather
+// than only inside the move-description overlay. It sits in the space freed by
+// dropping the "TYPE/" label.
+//
+// This keeps its own sprite id instead of borrowing gCategoryIconSpriteId, which
+// the description submenu creates and destroys as a pair -- sharing it would mean
+// closing the description silently deletes this icon too, and it would never come
+// back. Lifetime is tied to TryToAddMoveInfoWindow/TryToHideMoveInfoWindow, which
+// the controller already calls on entry to move selection and on every exit from
+// it, so there is no path that leaves the sprite stranded.
+// EWRAM_DATA and zero-initialised, matching gCategoryIconSpriteId in battle_main.c.
+// A plain `static u8 x = MAX_SPRITES;` lands in .data, which ld_script_test.ld
+// discards -- the ROM links fine and `make check` fails at the link step.
+// 0 is a legal sprite id, so validity is tracked with a separate flag rather than
+// by sentinel value.
+static EWRAM_DATA u8 sMoveCategoryIconSpriteId = 0;
+static EWRAM_DATA bool8 sMoveCategoryIconActive = 0;
+
+void TryToAddMoveCategoryIcon(u32 category)
+{
+    if (GetSpriteTileStartByTag(TAG_SWSH_CATEGORY_ICONS) == 0xFFFF)
+    {
+        LoadCompressedSpriteSheet(&sSpriteSheet_SwShCategoryIcons);
+        LoadSpritePalette(&sSpritePal_SwShCategoryIcons);
+    }
+
+    if (!sMoveCategoryIconActive)
+    {
+        u8 spriteId = CreateSprite(&gSpriteTemplate_SwShCategoryIcons,
+                                   MOVE_CATEGORY_ICON_X, MOVE_CATEGORY_ICON_Y, 0);
+        if (spriteId == MAX_SPRITES)
+            return;
+        sMoveCategoryIconSpriteId = spriteId;
+        sMoveCategoryIconActive = TRUE;
+    }
+
+    StartSpriteAnim(&gSprites[sMoveCategoryIconSpriteId], category);
+    gSprites[sMoveCategoryIconSpriteId].invisible = FALSE;
+}
+
+void TryToHideMoveCategoryIcon(void)
+{
+    if (!sMoveCategoryIconActive)
+        return;
+
+    DestroySprite(&gSprites[sMoveCategoryIconSpriteId]);
+    sMoveCategoryIconActive = FALSE;
+    FreeSpriteTilesByTag(TAG_SWSH_CATEGORY_ICONS);
+    FreeSpritePaletteByTag(TAG_SWSH_CATEGORY_ICONS);
+}
+
 #endif // SWSH_BATTLE_UI
 
 void CategoryIcons_LoadSpritesGfx(void)
