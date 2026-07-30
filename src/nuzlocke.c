@@ -235,11 +235,7 @@ u32 NuzlockeGetGraveyardBoxId(void)
 
 bool32 NuzlockeIsGraveyardBox(u32 boxId)
 {
-#if NUZLOCKE_PERMADEATH == TRUE
-    return boxId == NUZLOCKE_GRAVEYARD_BOX;
-#else
-    return FALSE;
-#endif
+    return NuzlockeSettingPermadeath() && boxId == NUZLOCKE_GRAVEYARD_BOX;
 }
 
 void NuzlockeSetUpGraveyardBox(void)
@@ -264,8 +260,6 @@ void NuzlockeInitNewRun(void)
 // ---------------------------------------------------------------------------
 // Rule 2: dupes clause
 // ---------------------------------------------------------------------------
-
-#if NUZLOCKE_DUPES_CLAUSE == TRUE
 
 static bool32 FamilyContains(const u16 *family, u32 count, u32 species)
 {
@@ -355,10 +349,10 @@ bool32 NuzlockeIsSpeciesOwned(u32 species)
 
     for (boxId = 0; boxId < TOTAL_BOXES_COUNT; boxId++)
     {
-    #if NUZLOCKE_DUPES_COUNT_GRAVEYARD == FALSE
-        if (NuzlockeIsGraveyardBox(boxId))
+        // The graveyard only counts toward the dupes clause when the player says
+        // so; otherwise a dead Zigzagoon would block catching a live one.
+        if (!NuzlockeSettingDupesCountGraveyard() && NuzlockeIsGraveyardBox(boxId))
             continue;
-    #endif
         for (boxPos = 0; boxPos < IN_BOX_COUNT; boxPos++)
         {
             struct BoxPokemon *boxMon = GetBoxedMonPtr(boxId, boxPos);
@@ -377,14 +371,7 @@ bool32 NuzlockeIsSpeciesOwned(u32 species)
     return FALSE;
 }
 
-#else // NUZLOCKE_DUPES_CLAUSE
 
-bool32 NuzlockeIsSpeciesOwned(u32 species)
-{
-    return FALSE;
-}
-
-#endif // NUZLOCKE_DUPES_CLAUSE
 
 // ---------------------------------------------------------------------------
 // Rules 2-5: encounter classification and suppression
@@ -450,22 +437,18 @@ void NuzlockeClassifyWildEncounter(void)
     if (species == SPECIES_NONE)
         return;
 
-#if NUZLOCKE_SHINY_CLAUSE == TRUE
     // Rule 3 outranks rule 2: a shiny dupe is still catchable.
-    if (IsMonShiny(mon))
+    if (NuzlockeSettingShinyClause() && IsMonShiny(mon))
     {
         sEncounterClass = NUZLOCKE_ENCOUNTER_SHINY;
         return;
     }
-#endif
 
-#if NUZLOCKE_DUPES_CLAUSE == TRUE
-    if (NuzlockeIsSpeciesOwned(species))
+    if (NuzlockeSettingDupesClause() && NuzlockeIsSpeciesOwned(species))
     {
         sEncounterClass = NUZLOCKE_ENCOUNTER_DUPE;
         return;
     }
-#endif
 
     sEncounterClass = NUZLOCKE_ENCOUNTER_LEGAL;
     sPendingMapSec = PENDING_FROM_MAPSEC(mapSec);
@@ -512,38 +495,30 @@ void NuzlockeOnMonCaught(void)
 
 bool32 NuzlockeIsMonDead(struct Pokemon *mon)
 {
-#if NUZLOCKE_PERMADEATH == TRUE
+    if (!NuzlockeSettingPermadeath())
+        return FALSE;
     if (mon == NULL || !GetMonData(mon, MON_DATA_SANITY_HAS_SPECIES))
         return FALSE;
     return GetMonData(mon, MON_DATA_IS_DEAD) != 0;
-#else
-    return FALSE;
-#endif
 }
 
 bool32 NuzlockeIsBoxMonDead(struct BoxPokemon *boxMon)
 {
-#if NUZLOCKE_PERMADEATH == TRUE
+    if (!NuzlockeSettingPermadeath())
+        return FALSE;
     if (boxMon == NULL || !GetBoxMonData(boxMon, MON_DATA_SANITY_HAS_SPECIES))
         return FALSE;
     return GetBoxMonData(boxMon, MON_DATA_IS_DEAD) != 0;
-#else
-    return FALSE;
-#endif
 }
 
 bool32 NuzlockeIsBoxMonDeadAt(u32 boxId, u32 boxPosition)
 {
-#if NUZLOCKE_PERMADEATH == TRUE
+    if (!NuzlockeSettingPermadeath())
+        return FALSE;
     if (boxId >= TOTAL_BOXES_COUNT || boxPosition >= IN_BOX_COUNT)
         return FALSE;
     return NuzlockeIsBoxMonDead(GetBoxedMonPtr(boxId, boxPosition));
-#else
-    return FALSE;
-#endif
 }
-
-#if NUZLOCKE_PERMADEATH == TRUE
 
 // Mark dead and move to the graveyard. If the graveyard is full the mon still
 // goes to the PC (and is still flagged dead, so it stays unusable) rather than
@@ -566,6 +541,11 @@ static void BuryMon(struct Pokemon *mon)
 u32 NuzlockeSweepFaintedParty(void)
 {
     u32 i, deaths = 0;
+
+    // Permadeath off means fainting is just fainting -- nothing is buried and the
+    // death counter does not move.
+    if (!NuzlockeSettingPermadeath())
+        return 0;
 
     for (i = 0; i < PARTY_SIZE; i++)
     {
@@ -595,14 +575,7 @@ u32 NuzlockeSweepFaintedParty(void)
     return deaths;
 }
 
-#else // NUZLOCKE_PERMADEATH
 
-u32 NuzlockeSweepFaintedParty(void)
-{
-    return 0;
-}
-
-#endif // NUZLOCKE_PERMADEATH
 
 // ---------------------------------------------------------------------------
 // Rules 4 + 8: battle end
@@ -660,10 +633,9 @@ void NuzlockeOnBattleEnd(void)
     partyCountBefore = CalculatePlayerPartyCount();
     NuzlockeSweepFaintedParty();
 
-#if NUZLOCKE_GAME_OVER_ON_WIPE == TRUE
-    if (partyCountBefore != 0 && CalculatePlayerPartyCount() == 0)
+    if (NuzlockeSettingGameOverOnWipe()
+     && partyCountBefore != 0 && CalculatePlayerPartyCount() == 0)
         NuzlockeSetRunFailed();
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -672,7 +644,9 @@ void NuzlockeOnBattleEnd(void)
 
 bool32 NuzlockeIsBlockedReviveItem(u32 item)
 {
-#if NUZLOCKE_PERMADEATH == TRUE && NUZLOCKE_BLOCK_REVIVES == TRUE
+    if (!NuzlockeSettingPermadeath() || !NuzlockeSettingBlockRevives())
+        return FALSE;
+
     // Match on the item, NOT on its effect bits. ITEM4_REVIVE is also set by
     // gItemEffect_RareCandy (it is how the level-up HP restore is expressed),
     // so testing the bit blocked every Rare/Exp/Cap/Endless Candy in the game.
@@ -686,16 +660,11 @@ bool32 NuzlockeIsBlockedReviveItem(u32 item)
     default:
         return FALSE;
     }
-#else
-    return FALSE;
-#endif
 }
 
 // ---------------------------------------------------------------------------
 // Rule 8: the run-over screen
 // ---------------------------------------------------------------------------
-
-#if NUZLOCKE_GAME_OVER_ON_WIPE == TRUE
 
 #define RUN_OVER_TEXT_WIN 0
 
@@ -823,22 +792,13 @@ static void CB2_RunOverToTitleScreen(void)
 
 bool32 NuzlockeTryStartRunOverScreen(void)
 {
-    if (!NuzlockeIsRunFailed())
+    if (!NuzlockeSettingGameOverOnWipe() || !NuzlockeIsRunFailed())
         return FALSE;
 
     gMain.state = 0;
     SetMainCallback2(CB2_NuzlockeRunOver);
     return TRUE;
 }
-
-#else // NUZLOCKE_GAME_OVER_ON_WIPE
-
-bool32 NuzlockeTryStartRunOverScreen(void)
-{
-    return FALSE;
-}
-
-#endif // NUZLOCKE_GAME_OVER_ON_WIPE
 
 #else // NUZLOCKE_ENABLED
 

@@ -97,10 +97,9 @@ static void Task_TryFieldPoisonWhiteOut(u8 taskId)
         NuzlockeSweepFaintedParty();
         if (AllMonsFainted())
         {
-        #if NUZLOCKE_GAME_OVER_ON_WIPE == TRUE
             // Rule 8: a wipe is a wipe, however it happened.
-            NuzlockeSetRunFailed();
-        #endif
+            if (NuzlockeSettingGameOverOnWipe())
+                NuzlockeSetRunFailed();
             // Battle facilities have their own white out script to handle the challenge loss
 #ifdef BUGFIX
             if (CurrentBattlePyramidLocation() || InBattlePike() || InTrainerHillChallenge())
