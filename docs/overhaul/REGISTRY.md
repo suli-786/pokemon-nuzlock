@@ -53,6 +53,7 @@ SaveBlock3 reservations (target ≤1300 B, keep ≥300 B margin for upstream mer
 | Graveyard | 0 | nuzlocke engine | **not needed** — Phase 3 uses PC box 13 (`TOTAL_BOXES_COUNT - 1`, renamed "GRAVE") plus a repurposed `BoxPokemon` bit, so zero SB3 cost |
 | Run seed (u32) | 4 | randomizer | reserved (seed is currently the trainer ID) |
 | Wager ledger (staked-mon records, small) | ~32 | wager battles | reserved |
+| Nuzlocke rule settings — 7 bits + init bit | **1** | nuzlocke settings menu | **CLAIMED (2026-07-30)** — dupes clause, dupes-count-graveyard, shiny clause, permadeath, game-over-on-wipe, block revives, plus `nuzlockeSettingsInit`. The `include/config/nuzlocke.h` constants stay as defaults; `NuzlockeSetting*()` accessors return the save value once initialised and the constant before that, so saves made before the menu existed keep the behaviour they were played with. The init bit exists because every other bit is a boolean where 0 is meaningful — without it "turned off" and "never set" are indistinguishable |
 | Tracker UI scratch (Phase 5) | ~16 | nuzlocke tracker | reserved |
 | **Total claimed so far** | **56** | | SaveBlock3 = **60 B** of 1624 (`test/save.c` `T_SAVEBLOCK3_SIZE`) |
 

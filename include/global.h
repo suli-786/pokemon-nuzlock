@@ -280,6 +280,19 @@ struct SaveBlock3
     u8 nuzlockeRunState;
     u8 nuzlockeCatches;
     u8 nuzlockeDeaths;
+    // Per-save rule settings, so the run can be configured in-game instead of at
+    // compile time. The constants in include/config/nuzlocke.h remain the defaults;
+    // these hold what the player actually chose. `settingsInit` exists because every
+    // other bit is a boolean where 0 is meaningful -- without it there is no way to
+    // tell "player turned this off" from "never touched". 1 byte.
+    u8 nuzlockeSettingsInit:1;
+    u8 nuzlockeDupesClause:1;
+    u8 nuzlockeDupesCountGraveyard:1;
+    u8 nuzlockeShinyClause:1;
+    u8 nuzlockePermadeath:1;
+    u8 nuzlockeGameOverOnWipe:1;
+    u8 nuzlockeBlockRevives:1;
+    u8 nuzlockeSettingsPadding:1;
 #endif
 }; /* max size 1624 bytes */
 

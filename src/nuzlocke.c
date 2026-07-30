@@ -82,6 +82,66 @@ static EWRAM_DATA bool8 sClassificationSuspended = 0; // set while a throwaway m
 // Route table (2 bits per MAPSEC, SaveBlock3)
 // ---------------------------------------------------------------------------
 
+// Settings are stored per save so a run can be configured in-game. Until the player
+// opens the menu, nuzlockeSettingsInit is 0 and every accessor falls through to the
+// compile-time default, which is exactly how the rules behaved before this existed --
+// so existing saves are unaffected.
+#if NUZLOCKE_ENABLED == TRUE
+#define NUZLOCKE_SETTING(field, fallback)                                   \
+    (gSaveBlock3Ptr->nuzlockeSettingsInit ? gSaveBlock3Ptr->field : (fallback))
+#else
+#define NUZLOCKE_SETTING(field, fallback) (fallback)
+#endif
+
+bool32 NuzlockeSettingDupesClause(void)
+{
+    return NUZLOCKE_SETTING(nuzlockeDupesClause, NUZLOCKE_DUPES_CLAUSE);
+}
+
+bool32 NuzlockeSettingDupesCountGraveyard(void)
+{
+    return NUZLOCKE_SETTING(nuzlockeDupesCountGraveyard, NUZLOCKE_DUPES_COUNT_GRAVEYARD);
+}
+
+bool32 NuzlockeSettingShinyClause(void)
+{
+    return NUZLOCKE_SETTING(nuzlockeShinyClause, NUZLOCKE_SHINY_CLAUSE);
+}
+
+bool32 NuzlockeSettingPermadeath(void)
+{
+    return NUZLOCKE_SETTING(nuzlockePermadeath, NUZLOCKE_PERMADEATH);
+}
+
+bool32 NuzlockeSettingGameOverOnWipe(void)
+{
+    return NUZLOCKE_SETTING(nuzlockeGameOverOnWipe, NUZLOCKE_GAME_OVER_ON_WIPE);
+}
+
+bool32 NuzlockeSettingBlockRevives(void)
+{
+    return NUZLOCKE_SETTING(nuzlockeBlockRevives, NUZLOCKE_BLOCK_REVIVES);
+}
+
+// Seeds the save's settings from the compile-time defaults and marks them live.
+// Called the first time the settings menu is opened, not at new game, so a save
+// started before the menu existed keeps falling back until the player engages.
+void NuzlockeInitSettings(void)
+{
+#if NUZLOCKE_ENABLED == TRUE
+    if (gSaveBlock3Ptr->nuzlockeSettingsInit)
+        return;
+
+    gSaveBlock3Ptr->nuzlockeDupesClause = NUZLOCKE_DUPES_CLAUSE;
+    gSaveBlock3Ptr->nuzlockeDupesCountGraveyard = NUZLOCKE_DUPES_COUNT_GRAVEYARD;
+    gSaveBlock3Ptr->nuzlockeShinyClause = NUZLOCKE_SHINY_CLAUSE;
+    gSaveBlock3Ptr->nuzlockePermadeath = NUZLOCKE_PERMADEATH;
+    gSaveBlock3Ptr->nuzlockeGameOverOnWipe = NUZLOCKE_GAME_OVER_ON_WIPE;
+    gSaveBlock3Ptr->nuzlockeBlockRevives = NUZLOCKE_BLOCK_REVIVES;
+    gSaveBlock3Ptr->nuzlockeSettingsInit = TRUE;
+#endif
+}
+
 bool32 NuzlockeIsActive(void)
 {
     return TRUE;

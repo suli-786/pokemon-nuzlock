@@ -36,6 +36,17 @@ enum NuzlockeEncounterClass
 // "nuzlocke inactive"). The Phase 5 tracker UI should only need these.
 // ---------------------------------------------------------------------------
 
+// Per-save rule settings. Each returns the player's choice once the settings have
+// been initialised, and the include/config/nuzlocke.h constant before that, so a
+// save made prior to the settings menu keeps the behaviour it was played with.
+bool32 NuzlockeSettingDupesClause(void);
+bool32 NuzlockeSettingDupesCountGraveyard(void);
+bool32 NuzlockeSettingShinyClause(void);
+bool32 NuzlockeSettingPermadeath(void);
+bool32 NuzlockeSettingGameOverOnWipe(void);
+bool32 NuzlockeSettingBlockRevives(void);
+void NuzlockeInitSettings(void);
+
 bool32 NuzlockeIsActive(void);
 u32 NuzlockeGetCurrentMapSec(void);
 bool32 NuzlockeIsTrackedMapSec(u32 mapSec);
