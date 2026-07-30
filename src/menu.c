@@ -496,8 +496,17 @@ void DisplayYesNoMenuWithDefault(u8 initialCursorPos)
 
 u8 AddStartMenuWindow(u8 numActions)
 {
+    // Two tiles per entry plus two for the frame. The screen is 20 tiles tall, so at
+    // the usual top of 1 the menu runs off the bottom from nine entries onward --
+    // which is exactly what happens once the PokeNav appears in a debug build
+    // (Debug, Pokedex, Pokemon, Bag, PokeNav, Player, Save, Option, Exit). Rather
+    // than drop an entry, tall menus start flush with the top of the screen, where
+    // 20 tiles fit precisely.
+    u8 height = (numActions * 2) + 2;
+    u8 top = (height > 19) ? 0 : 1;
+
     if (sStartMenuWindowId == WINDOW_NONE)
-        sStartMenuWindowId = AddWindowParameterized(0, 22, 1, 7, (numActions * 2) + 2, 15, 0x139);
+        sStartMenuWindowId = AddWindowParameterized(0, 22, top, 7, height, 15, 0x139);
     return sStartMenuWindowId;
 }
 

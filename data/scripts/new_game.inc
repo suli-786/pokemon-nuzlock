@@ -313,6 +313,12 @@ Overhaul_EventScript_NewGamePreset::
 	setflag FLAG_DELIVERED_DEVON_GOODS
 	setflag FLAG_DELIVERED_STEVEN_LETTER
 	setflag FLAG_RECEIVED_POKENAV
+	@ FLAG_RECEIVED_POKENAV only records that the story handed it over. What actually
+	@ makes the PokeNav exist -- its start menu entry, the region map, Match Call --
+	@ is FLAG_SYS_POKENAV_GET, and vanilla sets that in exactly one place:
+	@ RustboroCity_DevonCorp_3F, inside the Devon chain this preset marks complete so
+	@ it never runs. Without this the player is told they have a PokeNav and does not.
+	setflag FLAG_SYS_POKENAV_GET
 	setvar VAR_PETALBURG_WOODS_STATE, 1
 	setvar VAR_RUSTURF_TUNNEL_STATE, 3
 	setvar VAR_BRINEY_HOUSE_STATE, 1
